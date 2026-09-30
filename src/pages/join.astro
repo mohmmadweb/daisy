@@ -1,0 +1,65 @@
+---
+import Base from '../layouts/Base.astro';
+import { site, load } from '../lib/data';
+import { getEntry, render } from 'astro:content';
+const page = (await getEntry('pages', 'join'))!;
+const { Content } = await render(page);
+const positions = (await load('positions')).sort((a, b) => a.data.order - b.data.order);
+const rendered = await Promise.all(positions.map(async (p) => ({ p, Content: (await render(p)).Content })));
+const a = site.admissions;
+---
+<Base title={page.data.title} description={page.data.summary}>
+  <header class="page-head"><div class="wrap">
+    <h1>{page.data.title}</h1>
+    <p class="lede">{page.data.summary}</p>
+    {a && (
+      <p class:list={['banner', a.accepting ? 'yes' : 'no']}>
+        <strong>{a.accepting ? `Accepting students for ${a.cycle}.` : 'Not accepting new students at the moment.'}</strong>
+        {a.note && <span> {a.note}</span>}
+      </p>
+    )}
+  </div></header>
+  <div class="wrap page">
+    <section class="block">
+      <h2>Positions</h2>
+      <div class="positions">
+        {rendered.map(({ p, Content }) => (
+          <details class="pos" open={p.data.status === 'open'}>
+            <summary>
+              <span class="lvl">{p.data.level}</span>
+              <span class="ttl"><strong>{p.data.title}</strong><span class="meta">{p.data.summary}</span></span>
+              <span class:list={['status', p.data.status]}>{p.data.status === 'open' ? 'Open' : 'Closed'}</span>
+            </summary>
+            <div class="prose body"><Content /></div>
+          </details>
+        ))}
+      </div>
+    </section>
+    <div class="prose rest"><Content /></div>
+    <section class="block where">
+      <h2>Where we are</h2>
+      <address>{site.address.map((l) => <span>{l}</span>)}</address>
+      <p><a href="/contact/">Map and directions</a></p>
+    </section>
+  </div>
+</Base>
+<style>
+  .banner { margin-top: 26px; padding: 14px 18px; border-radius: var(--r-md); max-width: 70ch; font-size: var(--fs-sm); }
+  .banner.yes { background: var(--daisy-soft); color: var(--ink); border-left: 4px solid var(--daisy); }
+  .banner.no { background: var(--surface); border: 1px solid var(--rule); }
+  .page { padding-top: 36px; padding-bottom: 80px; }
+  .positions { border-top: 1px solid var(--rule); max-width: 900px; }
+  .pos { border-bottom: 1px solid var(--rule); }
+  .pos summary { display: grid; grid-template-columns: 120px minmax(0, 1fr) auto; gap: 18px; align-items: baseline; padding: 20px 0; cursor: pointer; list-style: none; }
+  .pos summary::-webkit-details-marker { display: none; }
+  .lvl { font-weight: 600; color: var(--muted); font-size: var(--fs-sm); }
+  .ttl { display: flex; flex-direction: column; gap: 3px; }
+  .ttl strong { font-size: 1.1rem; }
+  .pos summary:hover strong { text-decoration: underline; text-decoration-color: var(--daisy); text-decoration-thickness: 2px; }
+  .body { padding: 0 0 24px 138px; font-size: 1.02rem; }
+  @media (max-width: 640px) { .pos summary { grid-template-columns: 1fr auto; } .lvl { display: none; } .body { padding-left: 0; } }
+  .rest { margin-top: 56px; }
+  .rest :global(h2) { font-size: var(--fs-lg); }
+  .where address { font-style: normal; display: flex; flex-direction: column; color: var(--ink-2); }
+  .where p { margin-top: 10px; }
+</style>

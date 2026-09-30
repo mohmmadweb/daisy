@@ -1,0 +1,48 @@
+---
+import Base from '../layouts/Base.astro';
+import { gallery, fmtDate } from '../lib/data';
+const photos = gallery();
+---
+<Base title="Life in the lab" description="Photos from lab meetings, retreats, conferences and celebrations.">
+  <header class="page-head"><div class="wrap">
+    <h1>Life in the lab</h1>
+    <p class="lede">Lab meetings, retreats, conferences and celebrations.</p>
+  </div></header>
+  <div class="wrap page">
+    {photos.length === 0 && <p class="empty">No photos yet. Add images to <code>public/images/gallery/</code> and list them in <code>content/gallery.yml</code>.</p>}
+    <ul class="grid">
+      {photos.map((p, i) => (
+        <li><button type="button" data-open={i} aria-label={`Open photo: ${p.caption}`}>
+          <img src={p.src} alt={p.caption} loading="lazy" decoding="async" />
+        </button>
+        <p>{p.caption}{p.date && <span class="meta">{fmtDate(p.date, { year: 'numeric', month: 'long' })}</span>}</p></li>
+      ))}
+    </ul>
+    <dialog class="lightbox" aria-label="Photo">
+      <form method="dialog"><button class="close" aria-label="Close">Close</button></form>
+      <img alt="" /><p></p>
+    </dialog>
+  </div>
+</Base>
+<script>
+  const dlg = document.querySelector<HTMLDialogElement>('.lightbox');
+  document.querySelectorAll<HTMLButtonElement>('[data-open]').forEach((b) => b.addEventListener('click', () => {
+    const img = b.querySelector('img')!;
+    dlg!.querySelector('img')!.src = img.src; dlg!.querySelector('img')!.alt = img.alt;
+    dlg!.querySelector('p')!.textContent = img.alt;
+    dlg!.showModal();
+  }));
+  dlg?.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+</script>
+<style>
+  .page { padding-top: 32px; padding-bottom: 80px; }
+  .grid { list-style: none; margin: 0; padding: 0; columns: 3 280px; column-gap: 18px; }
+  .grid li { break-inside: avoid; margin-bottom: 22px; }
+  .grid button { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; border-radius: var(--r-md); overflow: hidden; }
+  .grid p { margin-top: 8px; font-size: var(--fs-sm); display: flex; justify-content: space-between; gap: 12px; }
+  .lightbox { max-width: min(1100px, 94vw); padding: 0; border: 0; border-radius: var(--r-md); background: var(--surface); color: var(--ink); }
+  .lightbox::backdrop { background: rgb(0 0 0 / 0.75); }
+  .lightbox img { max-height: 80vh; width: auto; margin: 0 auto; }
+  .lightbox p { padding: 12px 18px; }
+  .close { position: absolute; top: 10px; right: 10px; font: inherit; font-size: var(--fs-xs); padding: 5px 12px; border-radius: var(--r-sm); border: 0; background: var(--ink); color: var(--paper); cursor: pointer; }
+</style>

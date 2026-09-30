@@ -1,0 +1,27 @@
+---
+import Base from '../layouts/Base.astro';
+---
+<Base title="Search" description="Search publications, people, news and pages." noindex>
+  <link slot="head" href="/pagefind/pagefind-ui.css" rel="stylesheet" />
+  <header class="page-head"><div class="wrap"><h1>Search</h1><p class="lede">Publications, people, news, events and pages.</p></div></header>
+  <div class="wrap page">
+    <div id="search"></div>
+    <noscript><p class="empty">Search needs JavaScript. You can browse <a href="/publications/">publications</a> and <a href="/people/">people</a> directly.</p></noscript>
+  </div>
+  <script is:inline src="/pagefind/pagefind-ui.js"></script>
+  <script is:inline>
+    window.addEventListener('DOMContentLoaded', () => {
+      if (!window.PagefindUI) { document.getElementById('search').innerHTML = '<p class="empty">The search index is created when the site is built. Run <code>npm run build</code> to try search locally.</p>'; return; }
+      const ui = new PagefindUI({ element: '#search', showSubResults: true, showImages: false, resetStyles: false, autofocus: true });
+      const q = new URLSearchParams(location.search).get('q'); if (q) ui.triggerSearch(q);
+    });
+  </script>
+</Base>
+<style>
+  .page { padding-top: 32px; padding-bottom: 80px; max-width: 860px; }
+  #search {
+    --pagefind-ui-scale: 0.9; --pagefind-ui-primary: var(--link); --pagefind-ui-text: var(--ink);
+    --pagefind-ui-background: var(--surface); --pagefind-ui-border: var(--rule-strong); --pagefind-ui-tag: var(--daisy-soft);
+    --pagefind-ui-border-width: 1px; --pagefind-ui-border-radius: 8px; --pagefind-ui-font: var(--sans);
+  }
+</style>

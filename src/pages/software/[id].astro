@@ -1,0 +1,57 @@
+---
+import Base from '../../layouts/Base.astro';
+import PubItem from '../../components/PubItem.astro';
+import Icon from '../../components/Icon.astro';
+import { load, research, bibtex, PROJECT_KINDS, slug, editUrl } from '../../lib/data';
+import { render } from 'astro:content';
+export async function getStaticPaths() {
+  return (await load('projects')).map((p) => ({ params: { id: p.id }, props: { project: p } }));
+}
+const { project } = Astro.props;
+const d = project.data;
+const { Content } = await render(project);
+const pub = d.publication ? (await load('publications')).find((p) => p.id === d.publication) : undefined;
+const cite = d.cite ?? (pub ? bibtex(pub) : undefined);
+const areas = (await research()).filter((a) => d.areas.includes(a.id));
+const ppl = (await load('people')).filter((p) => d.people.includes(p.id));
+const edit = editUrl('projects', project.id);
+---
+<Base title={d.title} description={d.summary}>
+  <header class="page-head"><div class="wrap">
+    <a class="crumb" href="/software/">Software and data</a>
+    <p class="meta">{PROJECT_KINDS[d.kind]}{d.status === 'archived' && ', archived'}{d.sample && <span class="sample-note">Sample</span>}</p>
+    <h1>{d.title}</h1>
+    <p class="lede">{d.summary}</p>
+    <p class="links">
+      {d.repo && <a class="btn primary" href={d.repo}><Icon name="github" />Source code</a>}
+      {d.download && <a class="btn primary" href={d.download}><Icon name="download" />Download</a>}
+      {d.docs && <a class="btn" href={d.docs}>Documentation</a>}
+      {d.website && <a class="btn" href={d.website}>Website</a>}
+    </p>
+  </div></header>
+  <div class="wrap detail">
+    <div>
+      <div class="prose"><Content /></div>
+      {cite && (
+        <section class="block"><h2>How to cite</h2>
+          <p class="meta">If you use {d.title} in your research, please cite:</p>
+          <pre class="cite"><code>{cite}</code></pre>
+        </section>
+      )}
+      {pub && <section class="block"><h2>Paper</h2><PubItem pub={pub} /></section>}
+    </div>
+    <aside>
+      {d.license && <section><h2>License</h2><p>{d.license}</p></section>}
+      {areas.length > 0 && <section><h2>Research areas</h2><ul>{areas.map((a) => <li><a href={`/research/${a.id}/`}>{a.data.title}</a></li>)}</ul></section>}
+      {ppl.length > 0 && <section><h2>Maintainers</h2><ul>{ppl.map((p) => <li><a href={`/people/${p.id}/`}>{p.data.name}</a></li>)}</ul></section>}
+      {d.tags.length > 0 && <section><h2>Topics</h2><ul class="chips">{d.tags.map((t) => <li><a class="chip" href={`/tags/${slug(t)}/`}>{t}</a></li>)}</ul></section>}
+      {edit && <section><a class="meta" href={edit}>Edit this page</a></section>}
+    </aside>
+  </div>
+</Base>
+<style>
+  .meta .sample-note { margin-left: 8px; }
+  h1 { margin-top: 8px; }
+  .links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+  .cite { margin-top: 10px; font-size: 0.8rem; line-height: 1.6; padding: 18px; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-md); overflow-x: auto; }
+</style>

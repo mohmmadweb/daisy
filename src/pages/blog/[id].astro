@@ -1,0 +1,47 @@
+---
+import Base from '../../layouts/Base.astro';
+import Avatar from '../../components/Avatar.astro';
+import { load, fmtDate, slug, editUrl } from '../../lib/data';
+import { render } from 'astro:content';
+export async function getStaticPaths() {
+  return (await load('blog')).map((b) => ({ params: { id: b.id }, props: { post: b } }));
+}
+const { post } = Astro.props;
+const d = post.data;
+const { Content } = await render(post);
+const ppl = await load('people');
+const authors = d.authors.map((a) => ({ id: a, person: ppl.find((p) => p.id === a) }));
+const edit = editUrl('blog', post.id);
+---
+<Base title={d.title} description={d.summary} image={d.cover} type="article">
+  <article class="wrap post">
+    <header>
+      <a class="crumb" href="/blog/">Blog</a>
+      <h1>{d.title}{d.sample && <span class="sample-note">Sample</span>}</h1>
+      <p class="lede">{d.summary}</p>
+      <div class="byline">
+        {authors.map((a) => a.person
+          ? <a href={`/people/${a.id}/`}><Avatar name={a.person.data.name} photo={a.person.data.photo} size={36} />{a.person.data.name}</a>
+          : <span>{a.id}</span>)}
+        <time class="meta" datetime={d.date.toISOString()}>{fmtDate(d.date)}</time>
+      </div>
+    </header>
+    {d.cover && <img class="cover" src={d.cover} alt="" />}
+    <div class="prose"><Content /></div>
+    <footer>
+      {d.tags.length > 0 && <ul class="chips">{d.tags.map((t) => <li><a class="chip" href={`/tags/${slug(t)}/`}>{t}</a></li>)}</ul>}
+      {edit && <a class="meta" href={edit}>Edit this post</a>}
+    </footer>
+  </article>
+</Base>
+<style>
+  .post { max-width: calc(68ch + 2 * var(--gutter)); padding-top: 56px; padding-bottom: 80px; }
+  h1 { font-family: var(--serif); font-size: var(--fs-2xl); }
+  h1 .sample-note { margin-left: 10px; }
+  .lede { margin-top: 14px; font-size: var(--fs-md); color: var(--ink-2); }
+  .byline { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; margin: 22px 0 36px; padding-bottom: 24px; border-bottom: 1px solid var(--rule); font-size: var(--fs-sm); }
+  .byline a { display: inline-flex; align-items: center; gap: 8px; color: var(--ink); font-weight: 550; text-decoration: none; }
+  .byline :global(.avatar) { border-radius: 50%; font-size: 12px; }
+  .cover { border-radius: var(--r-md); margin-bottom: 32px; }
+  footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--rule); display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+</style>

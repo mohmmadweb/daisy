@@ -1,0 +1,26 @@
+---
+import Base from '../../layouts/Base.astro';
+import { load } from '../../lib/data';
+const pages = (await load('handbook')).sort((a, b) => a.data.order - b.data.order);
+---
+<Base title="Lab handbook" description="How the lab works: onboarding, meetings, writing, computing.">
+  <header class="page-head"><div class="wrap">
+    <h1>Lab handbook</h1>
+    <p class="lede">How the lab works, written down for new members and useful to anyone thinking of joining.</p>
+  </div></header>
+  <div class="wrap page">
+    <ol class="toc">
+      {pages.map((p) => <li><a href={`/handbook/${p.id}/`}><strong>{p.data.title}</strong>{p.data.sample && <span class="sample-note">Sample</span>}</a>{p.data.summary && <span class="meta">{p.data.summary}</span>}</li>)}
+    </ol>
+  </div>
+</Base>
+<style>
+  .page { padding-top: 32px; padding-bottom: 80px; }
+  .toc { max-width: 720px; padding-left: 1.4em; margin: 0; }
+  .toc li { padding: 14px 0 14px 6px; border-bottom: 1px solid var(--rule); }
+  .toc li::marker { color: var(--muted); font-weight: 600; }
+  .toc a { color: var(--ink); text-decoration: none; font-size: 1.1rem; }
+  .toc a:hover strong { text-decoration: underline; text-decoration-color: var(--daisy); text-decoration-thickness: 2px; }
+  .toc .sample-note { margin-left: 8px; }
+  .toc .meta { display: block; margin-top: 2px; }
+</style>

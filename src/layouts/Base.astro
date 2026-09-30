@@ -1,0 +1,249 @@
+---
+import '../styles/global.css';
+import Logo from '../components/Logo.astro';
+import Icon from '../components/Icon.astro';
+import { site, sections } from '../lib/data';
+
+interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+  type?: 'website' | 'article' | 'profile';
+  jsonld?: Record<string, unknown>;
+  noindex?: boolean;
+}
+const { title, description = site.description, image = '/og.png', type = 'website', jsonld, noindex } = Astro.props;
+const fullTitle = title ? `${title} | ${site.name}` : `${site.name} — ${site.full_name}`;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const ogImage = new URL(image, Astro.site);
+const path = Astro.url.pathname;
+const has = await sections();
+
+const primary = [
+  { href: '/research/', label: 'Research' },
+  { href: '/publications/', label: 'Publications' },
+  { href: '/people/', label: 'People' },
+  { href: '/news/', label: 'News' },
+  has.events && { href: '/events/', label: 'Events' },
+  has.teaching && { href: '/teaching/', label: 'Teaching' },
+  { href: '/join/', label: 'Join us' },
+].filter(Boolean) as { href: string; label: string }[];
+const more = [
+  { href: '/about/', label: 'About the lab' },
+  has.projects && { href: '/software/', label: 'Software and data' },
+  has.blog && { href: '/blog/', label: 'Blog' },
+  { href: '/theses/', label: 'Theses' },
+  has.gallery && { href: '/gallery/', label: 'Life in the lab' },
+  has.handbook && { href: '/handbook/', label: 'Lab handbook' },
+  { href: '/contact/', label: 'Contact' },
+].filter(Boolean) as { href: string; label: string }[];
+const active = (href: string) => path.startsWith(href);
+const moreActive = more.some((m) => active(m.href));
+
+const orgLd = {
+  '@context': 'https://schema.org',
+  '@type': 'ResearchOrganization',
+  name: `${site.name} — ${site.full_name}`,
+  url: Astro.site?.toString(),
+  logo: new URL('/favicon.svg', Astro.site).toString(),
+  email: site.email,
+  telephone: site.phone,
+  parentOrganization: { '@type': 'CollegeOrUniversity', name: site.university, url: site.university_url },
+  address: { '@type': 'PostalAddress', streetAddress: site.address.join(', '), addressLocality: 'Tehran', addressCountry: 'IR' },
+};
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{fullTitle}</title>
+  <meta name="description" content={description} />
+  <link rel="canonical" href={canonical} />
+  {noindex && <meta name="robots" content="noindex" />}
+  <meta name="theme-color" content="#f6f7f5" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#121416" media="(prefers-color-scheme: dark)" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="alternate" type="application/rss+xml" title={`${site.name} news`} href="/rss.xml" />
+  <link rel="sitemap" href="/sitemap-index.xml" />
+  <meta property="og:type" content={type} />
+  <meta property="og:site_name" content={site.name} />
+  <meta property="og:title" content={title ?? `${site.name} — ${site.full_name}`} />
+  <meta property="og:description" content={description} />
+  <meta property="og:url" content={canonical} />
+  <meta property="og:image" content={ogImage} />
+  <meta name="twitter:card" content="summary_large_image" />
+  <script type="application/ld+json" set:html={JSON.stringify(jsonld ?? orgLd)} />
+  <script is:inline>
+    try { const t = localStorage.getItem('theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+  <slot name="head" />
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="site">
+    <div class="wrap bar">
+      <a class="brand" href="/" aria-label={`${site.name} home`}>
+        <Logo size={34} />
+        <span class="brand-text"><strong>{site.name}</strong><span>{site.university}</span></span>
+      </a>
+      <nav class="nav" id="nav" aria-label="Main">
+        <ul>
+          {primary.map((n) => <li><a href={n.href} aria-current={active(n.href) ? 'page' : undefined}>{n.label}</a></li>)}
+          <li class="more-item">
+            <details class="more-menu">
+              <summary aria-current={moreActive ? 'page' : undefined}>More</summary>
+              <ul>
+                {more.map((n) => <li><a href={n.href} aria-current={active(n.href) ? 'page' : undefined}>{n.label}</a></li>)}
+              </ul>
+            </details>
+          </li>
+          {more.map((n) => <li class="flat"><a href={n.href} aria-current={active(n.href) ? 'page' : undefined}>{n.label}</a></li>)}
+        </ul>
+      </nav>
+      <div class="tools">
+        <a class="tool" href="/search/" aria-label="Search the site"><Icon name="search" size={19} /></a>
+        <button class="tool" id="theme" type="button" aria-label="Switch colour theme">
+          <span class="i-sun"><Icon name="sun" size={19} /></span><span class="i-moon"><Icon name="moon" size={19} /></span>
+        </button>
+        <button class="tool menu-btn" id="menu" type="button" aria-controls="nav" aria-expanded="false" aria-label="Open menu">
+          <Icon name="menu" size={21} />
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main" data-pagefind-body={noindex ? undefined : true}><slot /></main>
+
+  <footer class="site">
+    <div class="wrap foot">
+      <div class="foot-lab">
+        <a class="brand" href="/"><Logo size={40} /><span class="brand-text"><strong>{site.name}</strong><span>{site.full_name}</span></span></a>
+        <address>
+          {site.address.map((l) => <span>{l}</span>)}
+        </address>
+        <p class="foot-contact">
+          <a href={`mailto:${site.email}`}>{site.email}</a>
+          {site.phone && <a href={`tel:${site.phone.replace(/\s/g, '')}`}>{site.phone}</a>}
+        </p>
+      </div>
+      <nav class="foot-nav" aria-label="Footer">
+        <div>
+          <h2>Lab</h2>
+          <ul>
+            <li><a href="/about/">About</a></li><li><a href="/research/">Research</a></li>
+            <li><a href="/people/">People</a></li><li><a href="/people/#alumni">Alumni</a></li>
+            <li><a href="/join/">Join us</a></li><li><a href="/contact/">Contact</a></li>
+          </ul>
+        </div>
+        <div>
+          <h2>Work</h2>
+          <ul>
+            <li><a href="/publications/">Publications</a></li>
+            {has.projects && <li><a href="/software/">Software and data</a></li>}
+            <li><a href="/theses/">Theses</a></li>
+            {has.teaching && <li><a href="/teaching/">Teaching</a></li>}
+            {has.blog && <li><a href="/blog/">Blog</a></li>}
+          </ul>
+        </div>
+        <div>
+          <h2>Follow</h2>
+          <ul>
+            <li><a href="/news/">News</a></li>
+            {has.events && <li><a href="/events/">Events</a></li>}
+            <li><a href="/rss.xml">RSS feed</a></li>
+            {has.events && <li><a href="/events.ics">Calendar (.ics)</a></li>}
+            {Object.entries(site.social ?? {}).filter(([, v]) => v).map(([k, v]) => <li><a href={v} rel="me">{k[0].toUpperCase() + k.slice(1)}</a></li>)}
+          </ul>
+        </div>
+      </nav>
+    </div>
+    <div class="wrap foot-base">
+      <p>© {new Date().getFullYear()} {site.name}, <a href={site.department_url}>{site.department}</a>, <a href={site.university_url}>{site.university}</a></p>
+      {site.repo && <p><a href={site.repo}>Site source on GitHub</a></p>}
+    </div>
+  </footer>
+
+  <script is:inline>
+    (() => {
+      const root = document.documentElement;
+      document.getElementById('theme')?.addEventListener('click', () => {
+        const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+        root.dataset.theme = dark ? 'light' : 'dark';
+        try { localStorage.setItem('theme', root.dataset.theme); } catch (e) {}
+      });
+      const btn = document.getElementById('menu');
+      btn?.addEventListener('click', () => {
+        const open = btn.getAttribute('aria-expanded') === 'true';
+        btn.setAttribute('aria-expanded', String(!open));
+        document.body.classList.toggle('nav-open', !open);
+      });
+      const more = document.querySelector('.more-menu');
+      document.addEventListener('click', (e) => { if (more && !more.contains(e.target)) more.removeAttribute('open'); });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') more?.removeAttribute('open'); });
+    })();
+  </script>
+</body>
+</html>
+
+<style>
+  header.site { position: sticky; top: 0; z-index: 50; background: color-mix(in srgb, var(--paper) 92%, transparent); backdrop-filter: saturate(1.4) blur(10px); border-bottom: 1px solid var(--rule); }
+  .bar { display: flex; align-items: center; gap: 24px; height: 68px; }
+  .brand { display: inline-flex; align-items: center; gap: 11px; color: var(--ink); text-decoration: none; }
+  .brand-text { display: flex; flex-direction: column; line-height: 1.15; }
+  .brand-text strong { font-size: 1.06rem; letter-spacing: -0.01em; }
+  .brand-text span { font-size: var(--fs-xs); color: var(--muted); }
+  .nav { margin-left: auto; }
+  .nav > ul { display: flex; align-items: center; gap: 2px; list-style: none; margin: 0; padding: 0; }
+  .nav a, .nav summary { display: block; padding: 8px 11px; border-radius: var(--r-sm); color: var(--ink-2); text-decoration: none; font-size: var(--fs-sm); font-weight: 500; cursor: pointer; }
+  .nav a:hover, .nav summary:hover { color: var(--ink); background: color-mix(in srgb, var(--ink) 6%, transparent); }
+  .nav [aria-current='page'] { color: var(--ink); box-shadow: inset 0 -2px 0 var(--daisy); border-radius: 0; }
+  .more-menu { position: relative; }
+  .more-menu summary { list-style: none; display: flex; align-items: center; gap: 4px; }
+  .more-menu summary::-webkit-details-marker { display: none; }
+  .more-menu summary::after { content: ''; width: 6px; height: 6px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg) translateY(-2px); margin-left: 4px; }
+  .more-menu ul { position: absolute; right: 0; top: calc(100% + 8px); min-width: 210px; list-style: none; margin: 0; padding: 6px; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-md); box-shadow: 0 12px 32px -12px rgb(0 0 0 / 0.25); }
+  .more-menu ul a[aria-current='page'] { box-shadow: inset 2px 0 0 var(--daisy); }
+  .tools { display: flex; align-items: center; gap: 2px; }
+  .tool { display: inline-grid; place-items: center; width: 38px; height: 38px; border-radius: var(--r-sm); border: 0; background: none; color: var(--ink-2); cursor: pointer; }
+  .tool:hover { color: var(--ink); background: color-mix(in srgb, var(--ink) 6%, transparent); }
+  .i-moon { display: none; }
+  :global(:root[data-theme='dark']) .i-sun { display: none; }
+  :global(:root[data-theme='dark']) .i-moon { display: inline; }
+  @media (prefers-color-scheme: dark) {
+    :global(:root:not([data-theme='light'])) .i-sun { display: none; }
+    :global(:root:not([data-theme='light'])) .i-moon { display: inline; }
+  }
+  .menu-btn { display: none; }
+  .nav li.flat { display: none; }
+
+  @media (max-width: 1060px) {
+    .brand-text span { display: none; }
+    .menu-btn { display: inline-grid; }
+    .tools { margin-left: auto; }
+    .nav { display: none; position: fixed; inset: 68px 0 0 0; background: var(--paper); overflow-y: auto; padding: 16px var(--gutter) 40px; margin: 0; }
+    :global(body.nav-open) .nav { display: block; }
+    :global(body.nav-open) { overflow: hidden; }
+    .nav > ul { flex-direction: column; align-items: stretch; gap: 0; }
+    .nav a, .nav summary { font-size: 1.15rem; padding: 12px 4px; border-bottom: 1px solid var(--rule); border-radius: 0; }
+    .more-item { display: none; }
+    .nav li.flat { display: block; }
+    .nav [aria-current='page'] { box-shadow: inset 3px 0 0 var(--daisy); padding-left: 12px; }
+  }
+
+  footer.site { margin-top: 0; border-top: 1px solid var(--rule); background: var(--surface); }
+  .foot { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 2fr); gap: 48px; padding-top: 56px; padding-bottom: 40px; }
+  .foot-lab address { font-style: normal; display: flex; flex-direction: column; margin-top: 20px; color: var(--ink-2); font-size: var(--fs-sm); }
+  .foot-contact { display: flex; flex-direction: column; margin-top: 12px; font-size: var(--fs-sm); }
+  .foot-nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+  .foot-nav h2 { font-size: var(--fs-sm); color: var(--muted); font-weight: 600; margin-bottom: 10px; }
+  .foot-nav ul { list-style: none; margin: 0; padding: 0; }
+  .foot-nav li + li { margin-top: 6px; }
+  .foot-nav a { color: var(--ink); text-decoration: none; font-size: var(--fs-sm); }
+  .foot-nav a:hover { text-decoration: underline; }
+  .foot-base { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-top: 20px; padding-bottom: 28px; border-top: 1px solid var(--rule); font-size: var(--fs-xs); color: var(--muted); }
+  .foot-base a { color: inherit; }
+  @media (max-width: 760px) { .foot { grid-template-columns: 1fr; } .foot-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+</style>

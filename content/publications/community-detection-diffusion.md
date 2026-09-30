@@ -1,0 +1,21 @@
+---
+title: Community Detection Using Diffusion Information
+authors:
+  - Maryam Ramezani
+  - Ali Khodadadi
+  - Hamid R. Rabiee
+venue: ACM Transactions on Knowledge Discovery from Data
+venue_short: ACM TKDD
+year: 2018
+date: 2018-01-23
+type: journal
+areas: [complex-networks]
+tags: [Community Detection, Information Diffusion, Social Networks]
+abstract: >-
+  Community structure is usually recovered from the links of a network, but in many real
+  settings those links are unavailable while the information that travels over them is
+  observed. This work detects communities from diffusion information alone, using the
+  behaviour of cascades over the network in place of its topology.
+---
+
+Communities are normally read off the link structure of a network. When that structure is hidden, the cascades that travel over it still carry the signal: nodes in the same community tend to be activated together and in similar order. This paper builds community detection directly on that observation.

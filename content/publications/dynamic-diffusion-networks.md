@@ -1,0 +1,24 @@
+---
+title: Inferring Dynamic Diffusion Networks in Online Media
+authors:
+  - Maryam Tahani
+  - Ali Mohammad Afshin Hemmatyar
+  - Hamid R. Rabiee
+  - Maryam Ramezani
+venue: ACM Transactions on Knowledge Discovery from Data
+venue_short: ACM TKDD
+year: 2016
+date: 2016-06-14
+type: journal
+areas: [complex-networks]
+tags: [Network Inference, Information Diffusion, Dynamic Networks]
+abstract: >-
+  Diffusion networks in online media are not static: the links over which information
+  travels appear, disappear and change strength over time. This work infers the dynamic
+  structure of such networks from observed propagation, rather than assuming a single
+  fixed graph behind all cascades.
+---
+
+Most network inference methods assume one graph generated every cascade. Online media do not work that way: the edges that carry information change over weeks and months.
+
+This paper infers that changing structure from the propagation data itself.

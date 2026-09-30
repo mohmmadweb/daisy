@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://daisy-lab.ir/sitemap-index.xml

@@ -1,0 +1,12 @@
+---
+title: Complex and Social Networks
+short: Complex Networks
+summary: >-
+  Inferring structure from information diffusion, modelling cascades, and predicting what spreads.
+order: 5
+status: active
+---
+
+The structure of a social network is rarely available, but the traces left by information moving through it usually are. That asymmetry drives a family of problems the lab has worked on for years: inferring the underlying network from observed cascades while preserving its real topological properties, recovering what was missing when the data is only partially observed, detecting communities from diffusion rather than links, and predicting early which cascades will grow.
+
+This line of work produced DANI and DiffStru, and continues through survival-analysis models for early popularity prediction.

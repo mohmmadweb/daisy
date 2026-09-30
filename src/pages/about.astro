@@ -1,0 +1,44 @@
+---
+import Base from '../layouts/Base.astro';
+import { site, people, publications, research, load } from '../lib/data';
+import { getEntry, render } from 'astro:content';
+const page = (await getEntry('pages', 'about'))!;
+const { Content } = await render(page);
+const { current, alumni } = await people();
+const pubs = await publications();
+const areas = await research();
+const releases = await load('projects');
+const facts = [
+  [areas.length, 'research directions'], [pubs.length, 'publications'], [current.length, 'current members'],
+  [alumni.length, 'alumni'], [releases.length, 'software and data releases'],
+].filter(([n]) => (n as number) > 0);
+---
+<Base title={page.data.title} description={page.data.summary}>
+  <header class="page-head"><div class="wrap">
+    <h1>{page.data.title}</h1>
+    <p class="lede">{page.data.summary}</p>
+  </div></header>
+  <div class="wrap detail">
+    <div class="prose"><Content /></div>
+    <aside>
+      <section><h2>The lab in numbers</h2>
+        <dl class="facts">{facts.map(([n, l]) => <div><dt>{l}</dt><dd>{n}</dd></div>)}</dl>
+      </section>
+      {site.affiliations && site.affiliations.length > 0 && <section><h2>Part of</h2><ul>{site.affiliations.map((a) => <li>{a.url ? <a href={a.url}>{a.name}</a> : a.name}</li>)}</ul></section>}
+      {site.sponsors && site.sponsors.length > 0 && (
+        <section><h2>Supported by</h2>
+          <ul class="sponsors">{site.sponsors.map((s) => <li><a href={s.url}>{s.logo ? <img src={s.logo} alt={s.name} /> : s.name}</a></li>)}</ul>
+        </section>
+      )}
+      <section><h2>Contact</h2><ul><li><a href={`mailto:${site.email}`}>{site.email}</a></li><li><a href="/contact/">Address and map</a></li></ul></section>
+    </aside>
+  </div>
+</Base>
+<style>
+  .facts { margin: 0; }
+  .facts div { display: flex; flex-direction: row-reverse; justify-content: flex-end; align-items: baseline; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--rule); }
+  .facts dd { margin: 0; font-size: 1.4rem; font-weight: 600; min-width: 2ch; font-variant-numeric: tabular-nums; }
+  .facts dt { color: var(--ink-2); }
+  .sponsors { display: flex; flex-direction: column; gap: 14px !important; }
+  .sponsors img { max-height: 44px; width: auto; }
+</style>

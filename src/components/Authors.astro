@@ -1,0 +1,16 @@
+---
+// Author list; lab members (current or alumni) link to their profile.
+import { authorIndex } from '../lib/data';
+interface Props { authors: string[] }
+const { authors } = Astro.props;
+const find = await authorIndex();
+const items = authors.map((a) => ({ name: a, person: find(a) }));
+---
+<span class="authors">{items.map((a, i) => (
+  <Fragment>{a.person ? <a class="member" href={`/people/${a.person.id}/`}>{a.name}</a> : <span>{a.name}</span>}{i < items.length - 1 ? ', ' : ''}</Fragment>
+))}</span>
+<style>
+  .authors { color: var(--ink-2); }
+  .member { color: var(--ink); font-weight: 550; text-decoration: none; background-image: linear-gradient(var(--daisy), var(--daisy)); background-size: 100% 2px; background-position: 0 100%; background-repeat: no-repeat; }
+  .member:hover { background-size: 100% 100%; color: #1b1e22; }
+</style>

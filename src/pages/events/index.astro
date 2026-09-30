@@ -1,0 +1,31 @@
+---
+import Base from '../../layouts/Base.astro';
+import EventItem from '../../components/EventItem.astro';
+import Icon from '../../components/Icon.astro';
+import { events } from '../../lib/data';
+const { upcoming, past } = await events();
+const series = [...new Set([...upcoming, ...past].map((e) => e.data.series).filter(Boolean))];
+---
+<Base title="Events" description="Seminars, reading groups, talks and thesis defences at the lab.">
+  <header class="page-head"><div class="wrap">
+    <h1>Events</h1>
+    <p class="lede">Seminars, reading groups, talks and thesis defences. Everyone is welcome unless an event says otherwise.</p>
+    <p class="feeds">
+      <a href="/events.ics"><Icon name="calendar" />Add the lab calendar</a>
+      {series.length > 0 && <span class="meta">Series: {series.join(', ')}</span>}
+    </p>
+  </div></header>
+  <div class="wrap page">
+    <section class="block">
+      <h2>Upcoming</h2>
+      {upcoming.length ? upcoming.map((e) => <EventItem event={e} />) : <p class="empty">Nothing is scheduled yet. Subscribe to the calendar to hear about the next one.</p>}
+    </section>
+    {past.length > 0 && <section class="block"><h2>Past events</h2>{past.map((e) => <EventItem event={e} past />)}</section>}
+  </div>
+</Base>
+<style>
+  .page { padding-top: 36px; padding-bottom: 80px; }
+  .page > section { max-width: 900px; }
+  .feeds { margin-top: 18px; font-size: var(--fs-sm); display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: center; }
+  .feeds a { display: inline-flex; gap: 6px; align-items: center; font-weight: 550; }
+</style>

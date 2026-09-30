@@ -1,0 +1,26 @@
+---
+import Avatar from './Avatar.astro';
+import { years, type Person } from '../lib/data';
+interface Props { person: Person }
+const { person } = Astro.props;
+const d = person.data;
+---
+<a class="person" href={`/people/${person.id}/`}>
+  <Avatar name={d.name} photo={d.photo} size={112} />
+  <span class="who">
+    <strong>{d.name}{d.sample && <span class="sample-note">Sample</span>}</strong>
+    {d.title && <span class="role">{d.title}</span>}
+    {d.interests.length > 0 && <span class="int">{d.interests.slice(0, 3).join(', ')}</span>}
+    {years(person) && <span class="yrs">{years(person)}</span>}
+  </span>
+</a>
+<style>
+  .person { display: flex; gap: 16px; align-items: flex-start; text-decoration: none; color: var(--ink); padding: 4px; border-radius: var(--r-md); }
+  .person:hover strong { text-decoration: underline; text-decoration-color: var(--daisy); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+  .who { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding-top: 4px; }
+  strong { font-weight: 600; font-size: 1.02rem; }
+  strong .sample-note { margin-left: 6px; }
+  .role { font-size: var(--fs-sm); color: var(--ink-2); }
+  .int { font-size: var(--fs-xs); color: var(--muted); margin-top: 4px; }
+  .yrs { font-size: var(--fs-xs); color: var(--muted); }
+</style>

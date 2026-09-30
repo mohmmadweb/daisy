@@ -1,0 +1,36 @@
+---
+import Base from '../../layouts/Base.astro';
+import { load, byDateDesc, fmtDate } from '../../lib/data';
+const posts = (await load('blog')).sort(byDateDesc);
+const ppl = await load('people');
+const who = (a: string) => ppl.find((p) => p.id === a)?.data.name ?? a;
+---
+<Base title="Blog" description="Longer explanations of the lab's research, written for a wider audience.">
+  <header class="page-head"><div class="wrap">
+    <h1>Blog</h1>
+    <p class="lede">Longer explanations of our research, written for students, engineers and colleagues in neighbouring fields.</p>
+  </div></header>
+  <div class="wrap page">
+    {posts.map((p) => (
+      <article class="post">
+        <p class="meta"><time datetime={p.data.date.toISOString()}>{fmtDate(p.data.date)}</time></p>
+        <div>
+          <h2><a href={`/blog/${p.id}/`}>{p.data.title}</a>{p.data.sample && <span class="sample-note">Sample</span>}</h2>
+          <p class="sum">{p.data.summary}</p>
+          {p.data.authors.length > 0 && <p class="meta by">By {p.data.authors.map(who).join(', ')}</p>}
+        </div>
+      </article>
+    ))}
+  </div>
+</Base>
+<style>
+  .page { padding-top: 16px; padding-bottom: 80px; }
+  .post { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 24px; padding: 28px 0; border-bottom: 1px solid var(--rule); }
+  h2 { font-family: var(--serif); font-size: 1.5rem; }
+  h2 a { color: var(--ink); text-decoration: none; }
+  h2 a:hover { text-decoration: underline; text-decoration-color: var(--daisy); text-decoration-thickness: 2px; }
+  h2 .sample-note { margin-left: 8px; }
+  .sum { margin-top: 8px; color: var(--ink-2); max-width: 65ch; }
+  .by { margin-top: 8px; }
+  @media (max-width: 640px) { .post { grid-template-columns: 1fr; gap: 4px; } }
+</style>

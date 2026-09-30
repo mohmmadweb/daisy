@@ -1,0 +1,122 @@
+---
+import Base from '../../layouts/Base.astro';
+import PersonCard from '../../components/PersonCard.astro';
+import Avatar from '../../components/Avatar.astro';
+import Icon from '../../components/Icon.astro';
+import { site, people, ROLE_GROUPS, roleShort } from '../../lib/data';
+const { current, alumni } = await people();
+const director = current.filter((p) => p.data.role === 'faculty');
+const groups = ROLE_GROUPS.filter((g) => g.role !== 'faculty')
+  .map((g) => ({ ...g, members: current.filter((p) => p.data.role === g.role) }))
+  .filter((g) => g.members.length);
+const NEXT: Record<string, string> = { academia: 'Academia', industry: 'Industry', startup: 'Startups', other: 'Other' };
+const nextTypes = Object.keys(NEXT).filter((k) => alumni.some((a) => a.data.next_type === k));
+---
+<Base title="People" description={`Members and alumni of ${site.name} at ${site.university}.`}>
+  <header class="page-head"><div class="wrap">
+    <h1>People</h1>
+    <p class="lede">{site.name} is a group of researchers working between machine learning and data systems, in the {site.department} at {site.university}.</p>
+    <nav class="jump" aria-label="Groups">
+      {director.length > 0 && <a href="#faculty">Faculty</a>}
+      {groups.map((g) => <a href={`#${g.role}`}>{g.label}</a>)}
+      {alumni.length > 0 && <a href="#alumni">Alumni</a>}
+    </nav>
+  </div></header>
+
+  <div class="wrap">
+    {director.map((p) => (
+      <section class="lead" id="faculty">
+        <Avatar name={p.data.name} photo={p.data.photo} size={220} />
+        <div>
+          <p class="meta">Director</p>
+          <h2><a href={`/people/${p.id}/`}>{p.data.name}</a></h2>
+          <p class="t">{p.data.title}</p>
+          <p class="bio">{p.body?.split('\n\n')[0]}</p>
+          <p class="links">
+            {p.data.email && <a href={`mailto:${p.data.email}`}><Icon name="email" />{p.data.email}</a>}
+            {p.data.links.scholar && <a href={p.data.links.scholar}><Icon name="scholar" />Google Scholar</a>}
+            <a href={`/people/${p.id}/`}>Full profile</a>
+          </p>
+        </div>
+      </section>
+    ))}
+
+    {groups.map((g) => (
+      <section class="group" id={g.role}>
+        <h2>{g.label}</h2>
+        <div class="grid">{g.members.map((p) => <PersonCard person={p} />)}</div>
+      </section>
+    ))}
+
+    {groups.length === 0 && (
+      <section class="group"><p class="empty">The lab is recruiting its first students. <a href="/join/">See open positions</a>.</p></section>
+    )}
+
+    {alumni.length > 0 && (
+      <section class="group" id="alumni">
+        <div class="alumni-head">
+          <h2>Alumni</h2>
+          {nextTypes.length > 1 && (
+            <div class="seg" role="group" aria-label="Filter alumni by where they are now">
+              <button type="button" aria-pressed="true" data-next="">All</button>
+              {nextTypes.map((k) => <button type="button" aria-pressed="false" data-next={k}>{NEXT[k]}</button>)}
+            </div>
+          )}
+        </div>
+        <div class="table-wrap">
+          <table class="alumni">
+            <thead><tr><th scope="col">Name</th><th scope="col">Degree</th><th scope="col">Years</th><th scope="col">Thesis</th><th scope="col">Now</th></tr></thead>
+            <tbody>
+              {alumni.map((p) => (
+                <tr data-next-type={p.data.next_type ?? ''}>
+                  <td><a href={`/people/${p.id}/`}>{p.data.name}</a>{p.data.sample && <span class="sample-note">Sample</span>}</td>
+                  <td>{roleShort(p.data.role)}</td>
+                  <td class="num">{p.data.start ? `${p.data.start}–${p.data.end}` : p.data.end}</td>
+                  <td class="thesis">{p.data.thesis ? (p.data.thesis.url ? <a href={p.data.thesis.url}>{p.data.thesis.title}</a> : p.data.thesis.title) : ''}</td>
+                  <td>{p.data.next ?? ''}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    )}
+  </div>
+</Base>
+<script>
+  const btns = document.querySelectorAll<HTMLButtonElement>('[data-next]');
+  btns.forEach((b) => b.addEventListener('click', () => {
+    btns.forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    document.querySelectorAll<HTMLElement>('[data-next-type]').forEach((r) => (r.hidden = !!b.dataset.next && r.dataset.nextType !== b.dataset.next));
+  }));
+</script>
+<style>
+  .jump { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 22px; font-size: var(--fs-sm); font-weight: 500; }
+  .lead { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: clamp(24px, 4vw, 48px); padding: 48px 0; border-bottom: 1px solid var(--rule); align-items: start; }
+  .lead h2 { font-size: var(--fs-xl); margin-top: 2px; }
+  .lead h2 a { color: var(--ink); text-decoration: none; }
+  .lead .t { color: var(--ink-2); margin-top: 4px; }
+  .bio { margin-top: 16px; font-family: var(--serif); font-size: 1.08rem; line-height: 1.65; max-width: 64ch; }
+  .links { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 18px; font-size: var(--fs-sm); }
+  .links a { display: inline-flex; align-items: center; gap: 6px; }
+  @media (max-width: 640px) { .lead { grid-template-columns: 1fr; } .lead :global(.avatar) { width: 160px; height: 160px; } }
+  .group { padding: 44px 0; border-bottom: 1px solid var(--rule); }
+  .group:last-child { border-bottom: 0; padding-bottom: 80px; }
+  .group > h2, .alumni-head h2 { font-size: var(--fs-lg); }
+  .group > h2 { margin-bottom: 24px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 28px 32px; }
+  .alumni-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+  .seg { display: inline-flex; border: 1px solid var(--rule-strong); border-radius: var(--r-sm); overflow: hidden; }
+  .seg button { font: inherit; font-size: var(--fs-xs); font-weight: 550; padding: 6px 12px; border: 0; background: var(--surface); color: var(--ink-2); cursor: pointer; }
+  .seg button + button { border-left: 1px solid var(--rule-strong); }
+  .seg button[aria-pressed='true'] { background: var(--ink); color: var(--paper); }
+  .table-wrap { overflow-x: auto; }
+  .alumni { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); min-width: 640px; }
+  .alumni th { text-align: left; font-weight: 600; color: var(--muted); font-size: var(--fs-xs); padding: 8px 12px 8px 0; border-bottom: 1px solid var(--rule-strong); }
+  .alumni td { padding: 12px 12px 12px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  .alumni td a { color: var(--ink); font-weight: 550; }
+  .alumni td.thesis { max-width: 34ch; color: var(--ink-2); }
+  .alumni td.thesis a { font-weight: 400; color: var(--link); }
+  .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .alumni .sample-note { margin-left: 6px; }
+</style>

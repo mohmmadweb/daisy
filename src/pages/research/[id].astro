@@ -1,0 +1,53 @@
+---
+import Base from '../../layouts/Base.astro';
+import PubItem from '../../components/PubItem.astro';
+import PersonCard from '../../components/PersonCard.astro';
+import { research, publications, people, load, PROJECT_KINDS, editUrl } from '../../lib/data';
+import { render } from 'astro:content';
+export async function getStaticPaths() {
+  return (await research()).map((a) => ({ params: { id: a.id }, props: { area: a } }));
+}
+const { area } = Astro.props;
+const { Content } = await render(area);
+const pubs = (await publications()).filter((p) => p.data.areas.includes(area.id));
+const { current, alumni } = await people();
+const who = current.filter((p) => p.data.areas.includes(area.id));
+const past = alumni.filter((p) => p.data.areas.includes(area.id));
+const projects = (await load('projects')).filter((p) => p.data.areas.includes(area.id));
+const others = (await research()).filter((a) => a.id !== area.id);
+const edit = editUrl('research', area.id);
+---
+<Base title={area.data.title} description={area.data.summary}>
+  <header class="page-head"><div class="wrap">
+    <a class="crumb" href="/research/">Research</a>
+    <h1>{area.data.title}</h1>
+    <p class="lede">{area.data.summary}</p>
+  </div></header>
+  <div class="wrap detail">
+    <div>
+      <div class="prose"><Content /></div>
+      {pubs.length > 0 && <section class="block"><h2>Publications in this area</h2>{pubs.map((p) => <PubItem pub={p} />)}</section>}
+      {projects.length > 0 && (
+        <section class="block"><h2>Software and data</h2>
+          <ul class="plain">{projects.map((p) => <li><a href={`/software/${p.id}/`}>{p.data.title}</a> <span class="meta">{PROJECT_KINDS[p.data.kind]}</span></li>)}</ul>
+        </section>
+      )}
+    </div>
+    <aside>
+      <section>
+        <h2>Who works on this</h2>
+        <div class="people">{who.map((p) => <PersonCard person={p} />)}</div>
+        {who.length === 0 && <p class="meta">This direction is open for new students. <a href="/join/">Join us</a>.</p>}
+      </section>
+      {past.length > 0 && <section><h2>Alumni in this area</h2><ul>{past.map((p) => <li><a href={`/people/${p.id}/`}>{p.data.name}</a></li>)}</ul></section>}
+      <section><h2>Other directions</h2><ul>{others.map((a) => <li><a href={`/research/${a.id}/`}>{a.data.title}</a></li>)}</ul></section>
+      {edit && <section><a class="meta" href={edit}>Edit this page</a></section>}
+    </aside>
+  </div>
+</Base>
+<style>
+  .people { display: flex; flex-direction: column; gap: 14px; }
+  .people :global(.avatar) { width: 52px; height: 52px; font-size: 16px; }
+  .people :global(.int) { display: none; }
+  .plain { padding-left: 1.2em; }
+</style>

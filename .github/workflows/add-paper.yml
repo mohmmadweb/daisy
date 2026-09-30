@@ -1,0 +1,55 @@
+name: Add a paper from DOI or arXiv
+
+# Run from the Actions tab ("Run workflow") or from the button in Pages CMS.
+on:
+  workflow_dispatch:
+    inputs:
+      id:
+        description: DOI (10.xxxx/...) or arXiv id (2504.10753)
+        required: false
+        type: string
+      payload:
+        description: Filled in automatically by Pages CMS
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  add:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Read the DOI or arXiv id
+        id: input
+        env:
+          ID: ${{ inputs.id }}
+          PAYLOAD: ${{ inputs.payload }}
+        run: |
+          value="$ID"
+          if [ -z "$value" ] && [ -n "$PAYLOAD" ]; then
+            value=$(node -e 'const p=JSON.parse(process.env.PAYLOAD||"{}");process.stdout.write(String((p.inputs&&p.inputs.id)||""))')
+          fi
+          if [ -z "$value" ]; then echo "::error::Give a DOI or an arXiv id."; exit 1; fi
+          echo "value=$value" >> "$GITHUB_OUTPUT"
+      - name: Create the publication file
+        env:
+          VALUE: ${{ steps.input.outputs.value }}
+        run: node scripts/add-paper.mjs "$VALUE" | tee result.txt
+      - name: Commit and rebuild
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -z "$(git status --porcelain content)" ]; then echo "Nothing new to add."; exit 0; fi
+          git config user.name "daisy-lab-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add content/publications
+          git commit -m "Add publication $(git diff --cached --name-only | xargs -n1 basename)"
+          git push
+          gh workflow run deploy.yml --ref "${GITHUB_REF_NAME}"
+          echo "### Added" >> "$GITHUB_STEP_SUMMARY"; cat result.txt >> "$GITHUB_STEP_SUMMARY"

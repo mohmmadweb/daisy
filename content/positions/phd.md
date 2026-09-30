@@ -1,0 +1,11 @@
+---
+title: PhD students
+level: PhD
+status: open
+summary: For students admitted to the PhD programme in Computer Engineering at Sharif who want to work on data-centric AI systems.
+order: 1
+---
+
+We look for PhD students who are comfortable building systems as well as models. A strong background in databases, distributed systems, machine learning or probabilistic modelling is expected, along with the programming skill to turn an idea into a working prototype.
+
+Admission to the PhD programme is handled by the Department of Computer Engineering. Write to the director once you have applied, or before, and say which of the lab's research directions you want to work in and why.

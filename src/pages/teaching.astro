@@ -1,0 +1,48 @@
+---
+import Base from '../layouts/Base.astro';
+import { load, site } from '../lib/data';
+import { render } from 'astro:content';
+const courses = (await load('teaching')).sort((a, b) => a.data.order - b.data.order);
+const ppl = await load('people');
+const levels = [['graduate', 'Graduate courses'], ['undergraduate', 'Undergraduate courses']] as const;
+const rendered = await Promise.all(courses.map(async (c) => ({ c, Content: (await render(c)).Content })));
+---
+<Base title="Teaching" description={`Courses taught by members of ${site.name} in the ${site.department}.`}>
+  <header class="page-head"><div class="wrap">
+    <h1>Teaching</h1>
+    <p class="lede">Courses taught by members of the lab in the {site.department}.</p>
+  </div></header>
+  <div class="wrap page">
+    {levels.map(([lv, label]) => {
+      const list = rendered.filter((r) => r.c.data.level === lv);
+      return list.length > 0 && (
+        <section class="block">
+          <h2>{label}</h2>
+          {list.map(({ c, Content }) => {
+            const who = ppl.find((p) => p.id === c.data.instructor);
+            return (
+              <article class="course">
+                <p class="code">{c.data.code}</p>
+                <div>
+                  <h3>{c.data.website ? <a href={c.data.website}>{c.data.title}</a> : c.data.title}{c.data.sample && <span class="sample-note">Sample</span>}</h3>
+                  <div class="prose small"><Content /></div>
+                  <p class="meta">{who && <Fragment><a href={`/people/${who.id}/`}>{who.data.name}</a>. </Fragment>}Offered {c.data.terms.join(', ')}</p>
+                </div>
+              </article>
+            );
+          })}
+        </section>
+      );
+    })}
+  </div>
+</Base>
+<style>
+  .page { padding-top: 32px; padding-bottom: 80px; }
+  .course { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 20px; padding: 22px 0; border-bottom: 1px solid var(--rule); }
+  .code { font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; padding-top: 2px; }
+  h3 { font-size: 1.15rem; }
+  h3 .sample-note { margin-left: 8px; }
+  .small { font-size: 1rem; margin-top: 8px; }
+  .meta { margin-top: 10px; }
+  @media (max-width: 600px) { .course { grid-template-columns: 1fr; gap: 4px; } }
+</style>

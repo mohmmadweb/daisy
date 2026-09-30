@@ -1,0 +1,46 @@
+---
+import Base from '../../layouts/Base.astro';
+import { load, PROJECT_KINDS } from '../../lib/data';
+const all = (await load('projects')).sort((a, b) => a.data.order - b.data.order);
+const active = all.filter((p) => p.data.status === 'active');
+const archived = all.filter((p) => p.data.status === 'archived');
+const kinds = Object.keys(PROJECT_KINDS).filter((k) => active.some((p) => p.data.kind === k));
+---
+<Base title="Software and data" description="Code, datasets and benchmarks released by the lab.">
+  <header class="page-head"><div class="wrap">
+    <h1>Software and data</h1>
+    <p class="lede">Code, datasets and benchmarks the lab releases alongside its papers, free to use for research. If you use one, please cite the paper listed on its page.</p>
+  </div></header>
+  <div class="wrap page">
+    {kinds.map((k) => (
+      <section class="block">
+        <h2>{PROJECT_KINDS[k]}{k === 'software' ? '' : 's'}</h2>
+        <ul class="grid">
+          {active.filter((p) => p.data.kind === k).map((p) => (
+            <li><a href={`/software/${p.id}/`}>
+              <h3>{p.data.title}{p.data.sample && <span class="sample-note">Sample</span>}</h3>
+              <p>{p.data.summary}</p>
+              <span class="meta">{[p.data.repo && 'Source code', p.data.download && 'Download', p.data.license].filter(Boolean).join(', ')}</span>
+            </a></li>
+          ))}
+        </ul>
+      </section>
+    ))}
+    {archived.length > 0 && (
+      <section class="block"><h2>Archived</h2>
+        <ul class="arch">{archived.map((p) => <li><a href={`/software/${p.id}/`}>{p.data.title}</a> <span class="meta">{p.data.summary}</span></li>)}</ul>
+      </section>
+    )}
+  </div>
+</Base>
+<style>
+  .page { padding-top: 36px; padding-bottom: 80px; }
+  .grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+  .grid a { display: flex; flex-direction: column; height: 100%; padding: 22px; border: 1px solid var(--rule); border-radius: var(--r-md); background: var(--surface); color: var(--ink); text-decoration: none; }
+  .grid a:hover { border-color: var(--ink); }
+  h3 { font-size: 1.2rem; }
+  h3 .sample-note { margin-left: 8px; }
+  .grid p { margin-top: 8px; color: var(--ink-2); font-size: var(--fs-sm); flex: 1; }
+  .grid .meta { margin-top: 14px; font-size: var(--fs-xs); }
+  .arch { padding-left: 1.2em; }
+</style>

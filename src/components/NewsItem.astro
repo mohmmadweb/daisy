@@ -1,0 +1,26 @@
+---
+import { fmtDate, NEWS_CATEGORIES } from '../lib/data';
+import type { CollectionEntry } from 'astro:content';
+interface Props { item: CollectionEntry<'news'> }
+const { item } = Astro.props;
+const d = item.data;
+---
+<article class="news" data-category={d.category}>
+  <p class="when"><time datetime={d.date.toISOString()}>{fmtDate(d.date)}</time><span class="cat" data-c={d.category}>{NEWS_CATEGORIES[d.category]}</span></p>
+  <div>
+    <h3><a href={`/news/${item.id}/`}>{d.title}</a>{d.sample && <span class="sample-note">Sample</span>}</h3>
+    <p class="sum">{d.summary}</p>
+  </div>
+</article>
+<style>
+  .news { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 24px; padding: 20px 0; border-bottom: 1px solid var(--rule); }
+  .when { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-sm); color: var(--muted); }
+  .cat { font-size: var(--fs-xs); font-weight: 600; color: var(--ink-2); }
+  .cat[data-c='award'] { color: var(--daisy-ink); }
+  h3 { font-size: 1.08rem; font-weight: 600; line-height: 1.35; }
+  h3 a { color: var(--ink); text-decoration: none; }
+  h3 a:hover { text-decoration: underline; text-decoration-color: var(--daisy); text-decoration-thickness: 2px; }
+  h3 .sample-note { margin-left: 8px; }
+  .sum { margin-top: 6px; color: var(--ink-2); font-size: var(--fs-sm); max-width: 70ch; }
+  @media (max-width: 640px) { .news { grid-template-columns: 1fr; gap: 6px; } .when { flex-direction: row; gap: 10px; } }
+</style>

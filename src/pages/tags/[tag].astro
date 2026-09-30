@@ -1,0 +1,27 @@
+---
+import Base from '../../layouts/Base.astro';
+import PubItem from '../../components/PubItem.astro';
+import NewsItem from '../../components/NewsItem.astro';
+import { load, publications, slug, byDateDesc } from '../../lib/data';
+export async function getStaticPaths() {
+  const items = [...(await load('publications')), ...(await load('news')), ...(await load('projects')), ...(await load('blog'))];
+  const tags = new Map<string, string>();
+  items.forEach((i) => i.data.tags.forEach((t: string) => tags.set(slug(t), t)));
+  return [...tags].map(([s, t]) => ({ params: { tag: s }, props: { name: t } }));
+}
+const { name } = Astro.props;
+const pubs = (await publications()).filter((p) => p.data.tags.includes(name));
+const news = (await load('news')).filter((n) => n.data.tags.includes(name)).sort(byDateDesc);
+const projects = (await load('projects')).filter((p) => p.data.tags.includes(name));
+const posts = (await load('blog')).filter((p) => p.data.tags.includes(name));
+---
+<Base title={name} description={`Publications, news and releases about ${name}.`}>
+  <header class="page-head"><div class="wrap"><a class="crumb" href="/tags/">Topics</a><h1>{name}</h1></div></header>
+  <div class="wrap page">
+    {pubs.length > 0 && <section class="block"><h2>Publications</h2>{pubs.map((p) => <PubItem pub={p} />)}</section>}
+    {projects.length > 0 && <section class="block"><h2>Software and data</h2><ul>{projects.map((p) => <li><a href={`/software/${p.id}/`}>{p.data.title}</a></li>)}</ul></section>}
+    {posts.length > 0 && <section class="block"><h2>Blog</h2><ul>{posts.map((p) => <li><a href={`/blog/${p.id}/`}>{p.data.title}</a></li>)}</ul></section>}
+    {news.length > 0 && <section class="block"><h2>News</h2>{news.map((n) => <NewsItem item={n} />)}</section>}
+  </div>
+</Base>
+<style>.page { padding-top: 36px; padding-bottom: 80px; }</style>

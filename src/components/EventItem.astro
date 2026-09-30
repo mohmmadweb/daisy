@@ -1,0 +1,39 @@
+---
+import Icon from './Icon.astro';
+import { fmtDate, fmtTime, EVENT_TYPES } from '../lib/data';
+import type { CollectionEntry } from 'astro:content';
+interface Props { event: CollectionEntry<'events'>; past?: boolean }
+const { event, past = false } = Astro.props;
+const d = event.data;
+const day = d.date.toLocaleDateString('en-GB', { timeZone: 'Asia/Tehran', day: 'numeric' });
+const mon = d.date.toLocaleDateString('en-GB', { timeZone: 'Asia/Tehran', month: 'short' });
+---
+<article class:list={['event', { past }]}>
+  <div class="cal" aria-hidden="true"><span class="d">{day}</span><span class="m">{mon}</span></div>
+  <div class="body">
+    <p class="kind">{d.series ?? EVENT_TYPES[d.type]}</p>
+    <h3><a href={`/events/${event.id}/`}>{d.title}</a>{d.sample && <span class="sample-note">Sample</span>}</h3>
+    <p class="meta">
+      {d.speaker && <span>{d.speaker}{d.affiliation && `, ${d.affiliation}`}</span>}
+      <span><time datetime={d.date.toISOString()}>{fmtDate(d.date, { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' })}, {fmtTime(d.date)}{d.end && `–${fmtTime(d.end)}`}</time></span>
+      {d.location && <span>{d.location}</span>}
+    </p>
+    {past && (d.slides || d.video) && (
+      <p class="res">{d.slides && <a href={d.slides}>Slides</a>}{d.video && <a href={d.video}>Recording</a>}</p>
+    )}
+  </div>
+</article>
+<style>
+  .event { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 20px; padding: 20px 0; border-bottom: 1px solid var(--rule); }
+  .cal { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 64px; border-radius: var(--r-md); background: var(--daisy-soft); color: var(--daisy-ink); line-height: 1; }
+  .past .cal { background: none; border: 1px solid var(--rule-strong); color: var(--muted); }
+  .d { font-size: 1.5rem; font-weight: 650; }
+  .m { font-size: var(--fs-xs); font-weight: 600; margin-top: 4px; }
+  .kind { font-size: var(--fs-xs); color: var(--muted); font-weight: 550; }
+  h3 { font-size: 1.08rem; font-weight: 600; margin-top: 2px; line-height: 1.35; }
+  h3 a { color: var(--ink); text-decoration: none; }
+  h3 a:hover { text-decoration: underline; text-decoration-color: var(--daisy); text-decoration-thickness: 2px; }
+  h3 .sample-note { margin-left: 8px; }
+  .meta { display: flex; flex-direction: column; margin-top: 6px; }
+  .res { display: flex; gap: 14px; margin-top: 8px; font-size: var(--fs-sm); font-weight: 550; }
+</style>

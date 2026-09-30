@@ -1,0 +1,114 @@
+---
+import Base from '../../layouts/Base.astro';
+import PubItem from '../../components/PubItem.astro';
+import Icon from '../../components/Icon.astro';
+import { publications, research, people, PUB_TYPES } from '../../lib/data';
+
+const pubs = await publications();
+const areas = await research();
+const { all: members } = await people();
+const yrs = [...new Set(pubs.map((p) => p.data.year))].sort((a, b) => b - a);
+const types = Object.keys(PUB_TYPES).filter((t) => pubs.some((p) => p.data.type === t));
+const tagCount = new Map<string, number>();
+pubs.forEach((p) => p.data.tags.forEach((t) => tagCount.set(t, (tagCount.get(t) ?? 0) + 1)));
+const tags = [...tagCount].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+const authorSet = new Set(pubs.flatMap((p) => p.data.authors));
+const labAuthors = members.filter((m) => [m.data.name, ...m.data.aliases].some((n) => authorSet.has(n)));
+const usedAreas = areas.filter((a) => pubs.some((p) => p.data.areas.includes(a.id)));
+---
+<Base title="Publications" description="Papers from the lab and its collaborators, with links to PDFs, code, data and BibTeX.">
+  <header class="page-head"><div class="wrap">
+    <h1>Publications</h1>
+    <p class="lede">Work from the lab and its collaborators. Every entry links to the paper, and to code or data where they exist.</p>
+  </div></header>
+
+  <div class="wrap pub-page">
+    <form class="filters" role="search" onsubmit="return false" data-pagefind-ignore>
+      <label class="f-search"><span class="sr">Search publications</span><Icon name="search" size={17} /><input type="search" name="q" placeholder="Search titles, authors, venues" autocomplete="off" /></label>
+      <label><span>Year</span><select name="year"><option value="">All years</option>{yrs.map((y) => <option>{y}</option>)}</select></label>
+      <label><span>Type</span><select name="type"><option value="">All types</option>{types.map((t) => <option value={t}>{PUB_TYPES[t]}</option>)}</select></label>
+      {usedAreas.length > 0 && <label><span>Research area</span><select name="area"><option value="">All areas</option>{usedAreas.map((a) => <option value={a.id}>{a.data.title}</option>)}</select></label>}
+      <label><span>Topic</span><select name="tag"><option value="">All topics</option>{tags.map(([t, n]) => <option value={t}>{t} ({n})</option>)}</select></label>
+      {labAuthors.length > 1 && <label><span>Lab author</span><select name="author"><option value="">Anyone</option>{labAuthors.map((m) => <option value={[m.data.name, ...m.data.aliases].join('|')}>{m.data.name}</option>)}</select></label>}
+    </form>
+    <div class="status-row">
+      <p class="count" aria-live="polite"><strong data-shown>{pubs.length}</strong> of {pubs.length} publications</p>
+      <div class="actions">
+        <button type="button" class="linkish" data-reset hidden>Clear filters</button>
+        <a href="/publications.bib" class="linkish" download><Icon name="download" size={15} />All as BibTeX</a>
+      </div>
+    </div>
+
+    {yrs.map((y) => (
+      <section class="year" data-year-group={y}>
+        <h2 class="y">{y}</h2>
+        <div>{pubs.filter((p) => p.data.year === y).map((p) => <PubItem pub={p} showYear={false} />)}</div>
+      </section>
+    ))}
+    <p class="empty" data-none hidden>No publications match these filters. <button type="button" class="linkish" data-reset>Clear filters</button></p>
+  </div>
+</Base>
+
+<script>
+  const form = document.querySelector<HTMLFormElement>('form.filters')!;
+  const items = [...document.querySelectorAll<HTMLElement>('[data-pub]')];
+  const groups = [...document.querySelectorAll<HTMLElement>('[data-year-group]')];
+  const shown = document.querySelector('[data-shown]')!;
+  const none = document.querySelector<HTMLElement>('[data-none]')!;
+  const resets = document.querySelectorAll<HTMLElement>('[data-reset]');
+  const fields = ['q', 'year', 'type', 'area', 'tag', 'author'];
+  const get = (n: string) => (form.elements.namedItem(n) as HTMLInputElement | null)?.value ?? '';
+
+  const params = new URLSearchParams(location.search);
+  fields.forEach((f) => { const el = form.elements.namedItem(f) as HTMLInputElement | null; if (el && params.get(f)) el.value = params.get(f)!; });
+
+  function apply() {
+    const q = get('q').trim().toLowerCase(), year = get('year'), type = get('type'), area = get('area'), tag = get('tag'), author = get('author');
+    const names = author ? author.split('|') : [];
+    let n = 0;
+    for (const el of items) {
+      const d = el.dataset;
+      const ok = (!q || q.split(/\s+/).every((w) => d.text!.includes(w)))
+        && (!year || d.year === year) && (!type || d.type === type)
+        && (!area || d.areas!.split('|').includes(area)) && (!tag || d.tags!.split('|').includes(tag))
+        && (!names.length || d.authors!.split('|').some((a) => names.includes(a)));
+      el.hidden = !ok; if (ok) n++;
+    }
+    groups.forEach((g) => (g.hidden = !g.querySelector('[data-pub]:not([hidden])')));
+    shown.textContent = String(n);
+    none.hidden = n > 0;
+    const active = fields.some((f) => get(f));
+    resets.forEach((r) => (r.hidden = !active && r.closest('[data-none]') === null));
+    const url = new URL(location.href);
+    fields.forEach((f) => (get(f) ? url.searchParams.set(f, get(f)) : url.searchParams.delete(f)));
+    history.replaceState(null, '', url);
+  }
+  form.addEventListener('input', apply);
+  resets.forEach((r) => r.addEventListener('click', () => { form.reset(); apply(); }));
+  apply();
+</script>
+
+<style>
+  .pub-page { padding-top: 28px; padding-bottom: 80px; }
+  .filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; padding: 18px; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-md); }
+  .filters label { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-xs); color: var(--muted); font-weight: 550; min-width: 0; }
+  .filters select, .filters input { font: inherit; font-size: var(--fs-sm); color: var(--ink); background: var(--paper); border: 1px solid var(--rule-strong); border-radius: var(--r-sm); padding: 8px 10px; max-width: 220px; }
+  .f-search { flex: 1 1 280px; position: relative; }
+  .f-search :global(svg) { position: absolute; left: 11px; bottom: 11px; color: var(--muted); }
+  .f-search input { width: 100%; max-width: none; padding-left: 36px; }
+  .status-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin: 20px 0 8px; }
+  .count { font-size: var(--fs-sm); color: var(--muted); }
+  .count strong { color: var(--ink); }
+  .actions { display: flex; gap: 18px; }
+  .linkish { font: inherit; font-size: var(--fs-sm); font-weight: 550; color: var(--link); background: none; border: 0; padding: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+  .linkish:hover { text-decoration: underline; }
+  .year { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 24px; padding-top: 28px; border-top: 1px solid var(--rule); margin-top: 12px; }
+  .y { font-family: var(--serif); font-size: 2rem; font-weight: 500; color: var(--muted); position: sticky; top: 88px; align-self: start; line-height: 1; }
+  .year :global(.pub:last-child) { border-bottom: 0; }
+  @media (max-width: 700px) {
+    .year { grid-template-columns: 1fr; gap: 8px; }
+    .y { position: static; font-size: 1.5rem; }
+    .filters select { max-width: none; }
+    .filters label:not(.f-search) { flex: 1 1 40%; }
+  }
+</style>

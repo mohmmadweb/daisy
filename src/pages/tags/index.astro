@@ -1,0 +1,17 @@
+---
+import Base from '../../layouts/Base.astro';
+import { load, slug } from '../../lib/data';
+const items = [...(await load('publications')), ...(await load('news')), ...(await load('projects')), ...(await load('blog'))];
+const count = new Map<string, number>();
+items.forEach((i) => i.data.tags.forEach((t: string) => count.set(t, (count.get(t) ?? 0) + 1)));
+const tags = [...count].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+---
+<Base title="Topics" description="Keywords attached to publications, news and releases.">
+  <header class="page-head"><div class="wrap"><h1>Topics</h1><p class="lede">Keywords attached to publications, news and releases, ordered by how often they appear.</p></div></header>
+  <div class="wrap page"><ul class="chips big">{tags.map(([t, n]) => <li><a class="chip" href={`/tags/${slug(t)}/`}>{t} <span class="meta">{n}</span></a></li>)}</ul></div>
+</Base>
+<style>
+  .page { padding-top: 36px; padding-bottom: 80px; }
+  .big { gap: 10px; }
+  .big .chip { font-size: var(--fs-sm); padding: 6px 14px; }
+</style>

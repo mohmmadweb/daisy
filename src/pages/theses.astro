@@ -1,0 +1,40 @@
+---
+import Base from '../layouts/Base.astro';
+import { people, roleShort } from '../lib/data';
+const { all } = await people();
+const withThesis = all.filter((p) => p.data.thesis).sort((a, b) => (b.data.thesis!.year ?? b.data.end ?? 9999) - (a.data.thesis!.year ?? a.data.end ?? 9999));
+const groups = (['phd', 'msc', 'bsc'] as const).map((r) => ({ r, list: withThesis.filter((p) => p.data.role === r) })).filter((g) => g.list.length);
+const LABEL = { phd: 'PhD dissertations', msc: 'MSc theses', bsc: 'BSc projects' };
+---
+<Base title="Theses" description="Dissertations and theses written in the lab.">
+  <header class="page-head"><div class="wrap">
+    <h1>Theses</h1>
+    <p class="lede">Dissertations and theses written in the lab. Each links to its author's profile, and to the full text where it is public.</p>
+  </div></header>
+  <div class="wrap page">
+    {groups.map((g) => (
+      <section class="block"><h2>{LABEL[g.r]}</h2>
+        {g.list.map((p) => (
+          <article class="th">
+            <p class="yr">{p.data.thesis!.year ?? p.data.end ?? 'In progress'}</p>
+            <div>
+              <h3>{p.data.thesis!.url ? <a href={p.data.thesis!.url}>{p.data.thesis!.title}</a> : p.data.thesis!.title}{p.data.sample && <span class="sample-note">Sample</span>}</h3>
+              <p class="meta"><a href={`/people/${p.id}/`}>{p.data.name}</a>, {roleShort(p.data.role)}{p.data.co_advisor && `, co-advised with ${p.data.co_advisor}`}</p>
+            </div>
+          </article>
+        ))}
+      </section>
+    ))}
+    {groups.length === 0 && <p class="empty">No theses are listed yet. Add a <code>thesis:</code> block to a person's file to show it here.</p>}
+  </div>
+</Base>
+<style>
+  .page { padding-top: 32px; padding-bottom: 80px; }
+  .th { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 20px; padding: 18px 0; border-bottom: 1px solid var(--rule); }
+  .yr { color: var(--muted); font-variant-numeric: tabular-nums; }
+  h3 { font-family: var(--serif); font-size: 1.15rem; font-weight: 600; }
+  h3 a { color: var(--ink); }
+  h3 .sample-note { margin-left: 8px; }
+  .meta { margin-top: 4px; }
+  @media (max-width: 600px) { .th { grid-template-columns: 1fr; gap: 2px; } }
+</style>

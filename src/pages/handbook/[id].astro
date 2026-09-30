@@ -1,0 +1,32 @@
+---
+import Base from '../../layouts/Base.astro';
+import { load, editUrl } from '../../lib/data';
+import { render } from 'astro:content';
+export async function getStaticPaths() {
+  const pages = (await load('handbook')).sort((a, b) => a.data.order - b.data.order);
+  return pages.map((p) => ({ params: { id: p.id }, props: { page: p, pages } }));
+}
+const { page, pages } = Astro.props;
+const { Content, headings } = await render(page);
+const edit = editUrl('handbook', page.id);
+---
+<Base title={page.data.title} description={page.data.summary}>
+  <header class="page-head"><div class="wrap">
+    <a class="crumb" href="/handbook/">Lab handbook</a>
+    <h1>{page.data.title}{page.data.sample && <span class="sample-note">Sample</span>}</h1>
+    {page.data.summary && <p class="lede">{page.data.summary}</p>}
+  </div></header>
+  <div class="wrap detail">
+    <div class="prose"><Content /></div>
+    <aside>
+      {headings.length > 1 && <section><h2>On this page</h2><ul>{headings.filter((h) => h.depth === 2).map((h) => <li><a href={`#${h.slug}`}>{h.text}</a></li>)}</ul></section>}
+      <section><h2>Handbook</h2><ol class="hb">{pages.map((p) => <li><a href={`/handbook/${p.id}/`} aria-current={p.id === page.id ? 'page' : undefined}>{p.data.title}</a></li>)}</ol></section>
+      {edit && <section><a class="meta" href={edit}>Edit this page</a></section>}
+    </aside>
+  </div>
+</Base>
+<style>
+  h1 .sample-note { margin-left: 10px; font-size: 0.8rem; }
+  .hb { padding-left: 1.3em !important; list-style: decimal !important; }
+  .hb [aria-current='page'] { color: var(--ink); font-weight: 600; text-decoration: none; }
+</style>

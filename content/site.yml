@@ -1,0 +1,62 @@
+# ─────────────────────────────────────────────────────────────
+# Lab-wide settings. Edit this file to change the lab's name,
+# contact details, footer, sponsors and admissions status.
+# ─────────────────────────────────────────────────────────────
+
+name: DAISY Lab
+full_name: Data-Centric AI Systems Lab
+tagline: Data-centric AI systems, built to survive real data.
+intro: >-
+  We build AI systems that treat data as a first-class citizen — learning to
+  optimize databases and infrastructure, making data accessible through natural
+  language, and understanding the networks that data lives in.
+description: >-
+  DAISY Lab studies data-centric AI systems at Sharif University of Technology:
+  machine learning for systems, systems for machine learning, database
+  optimization, Text-to-SQL, AI agents, and complex networks.
+founded: 2024
+
+university: Sharif University of Technology
+university_url: https://www.sharif.edu
+department: Department of Computer Engineering
+department_url: https://ce.sharif.edu
+
+email: maryam.ramezani@sharif.edu
+phone: "+98 21 6616 6654"
+address:
+  - Room 821, Department of Computer Engineering
+  - Sharif University of Technology
+  - Azadi Avenue, Tehran, Iran
+# Map pin (latitude, longitude) of the Computer Engineering building.
+map: { lat: 35.70405, lon: 51.35120 }
+
+# Admissions banner on the Join page and home page.
+# accepting: true  → "We are accepting students for <cycle>"
+admissions:
+  accepting: true
+  cycle: the 2027 intake
+  note: Write to the director before the department's application deadline.
+
+social:
+  github: ""
+  twitter: ""
+  linkedin: ""
+  youtube: ""
+  telegram: ""
+  instagram: ""
+
+# Organisations the lab works with or is funded by (logos go in public/images/sponsors/).
+sponsors: []
+#  - name: Iran National Science Foundation (INSF)
+#    url: https://insf.org
+#    logo: /images/sponsors/insf.png
+affiliations:
+  - name: Department of Computer Engineering, Sharif University of Technology
+    url: https://ce.sharif.edu
+
+# Samples: entries marked `sample: true` are placeholder content that shows how
+# each page looks. Set this to false once real content is in place.
+show_samples: true
+
+# Link on every page footer that opens the source file on GitHub for editing.
+repo: https://github.com/mohmmadweb/daisy

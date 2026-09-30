@@ -1,0 +1,57 @@
+---
+import Base from '../../layouts/Base.astro';
+import Icon from '../../components/Icon.astro';
+import { load, fmtDate, fmtTime, EVENT_TYPES, editUrl } from '../../lib/data';
+import { render } from 'astro:content';
+export async function getStaticPaths() {
+  return (await load('events')).map((e) => ({ params: { id: e.id }, props: { event: e } }));
+}
+const { event } = Astro.props;
+const d = event.data;
+const { Content } = await render(event);
+const past = (d.end ?? d.date).getTime() < Date.now();
+const ppl = (await load('people')).filter((p) => d.people.includes(p.id));
+const stamp = (x: Date) => x.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+const end = d.end ?? new Date(d.date.getTime() + 60 * 60 * 1000);
+const gcal = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(d.title)}&dates=${stamp(d.date)}/${stamp(end)}&location=${encodeURIComponent(d.location ?? d.online ?? '')}&details=${encodeURIComponent(new URL(`/events/${event.id}/`, Astro.site).toString())}`;
+const edit = editUrl('events', event.id);
+const ld = {
+  '@context': 'https://schema.org', '@type': 'Event', name: d.title, startDate: d.date.toISOString(), endDate: end.toISOString(),
+  eventAttendanceMode: d.online && d.location ? 'https://schema.org/MixedEventAttendanceMode' : d.online ? 'https://schema.org/OnlineEventAttendanceMode' : 'https://schema.org/OfflineEventAttendanceMode',
+  location: d.location ? { '@type': 'Place', name: d.location } : { '@type': 'VirtualLocation', url: d.online },
+  performer: d.speaker ? { '@type': 'Person', name: d.speaker } : undefined,
+};
+---
+<Base title={d.title} description={`${EVENT_TYPES[d.type]}${d.speaker ? ` by ${d.speaker}` : ''}, ${fmtDate(d.date)}.`} jsonld={ld}>
+  <header class="page-head"><div class="wrap">
+    <a class="crumb" href="/events/">Events</a>
+    <p class="meta">{d.series ?? EVENT_TYPES[d.type]}{d.sample && <span class="sample-note">Sample</span>}</p>
+    <h1>{d.title}</h1>
+    {d.speaker && <p class="lede">{d.speaker_url ? <a href={d.speaker_url}>{d.speaker}</a> : d.speaker}{d.affiliation && `, ${d.affiliation}`}</p>}
+  </div></header>
+  <div class="wrap detail">
+    <div>
+      <dl class="facts">
+        <div><dt>When</dt><dd>{fmtDate(d.date, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}<br />{fmtTime(d.date)}{d.end && `–${fmtTime(d.end)}`} Tehran time</dd></div>
+        {d.location && <div><dt>Where</dt><dd>{d.location}</dd></div>}
+        {d.online && !past && <div><dt>Online</dt><dd><a href={d.online}>Join online</a></dd></div>}
+      </dl>
+      <div class="prose"><Content /></div>
+      {(d.slides || d.video) && <p class="res">{d.slides && <a class="btn" href={d.slides}>Slides</a>}{d.video && <a class="btn" href={d.video}><Icon name="video" />Recording</a>}</p>}
+    </div>
+    <aside>
+      {!past && <section><h2>Add to calendar</h2><ul><li><a href={gcal}>Google Calendar</a></li><li><a href={`/events/${event.id}.ics`}>Download .ics</a></li></ul></section>}
+      {ppl.length > 0 && <section><h2>From the lab</h2><ul>{ppl.map((p) => <li><a href={`/people/${p.id}/`}>{p.data.name}</a></li>)}</ul></section>}
+      <section><h2>All events</h2><ul><li><a href="/events/">Upcoming and past events</a></li><li><a href="/events.ics">Subscribe to the calendar</a></li></ul></section>
+      {edit && <section><a class="meta" href={edit}>Edit this page</a></section>}
+    </aside>
+  </div>
+</Base>
+<style>
+  .meta .sample-note { margin-left: 8px; }
+  h1 { margin-top: 8px; max-width: 28ch; }
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin: 0 0 32px; padding: 20px; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-md); }
+  dt { font-size: var(--fs-xs); color: var(--muted); font-weight: 600; }
+  dd { margin: 4px 0 0; }
+  .res { display: flex; gap: 10px; margin-top: 28px; }
+</style>

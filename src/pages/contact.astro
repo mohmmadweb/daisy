@@ -1,0 +1,44 @@
+---
+import Base from '../layouts/Base.astro';
+import Icon from '../components/Icon.astro';
+import { site } from '../lib/data';
+import { getEntry, render } from 'astro:content';
+const page = (await getEntry('pages', 'contact'))!;
+const { Content } = await render(page);
+const m = site.map;
+const d = 0.004;
+const osm = m && `https://www.openstreetmap.org/export/embed.html?bbox=${m.lon - d}%2C${m.lat - d * 0.7}%2C${m.lon + d}%2C${m.lat + d * 0.7}&layer=mapnik&marker=${m.lat}%2C${m.lon}`;
+---
+<Base title={page.data.title} description={`Address, email and directions for ${site.name}.`}>
+  <header class="page-head"><div class="wrap">
+    <h1>{page.data.title}</h1>
+    <p class="lede">{page.data.summary}</p>
+  </div></header>
+  <div class="wrap grid">
+    <div>
+      <dl class="info">
+        <div><dt><Icon name="email" />Email</dt><dd><a href={`mailto:${site.email}`}>{site.email}</a></dd></div>
+        {site.phone && <div><dt><Icon name="phone" />Phone</dt><dd><a href={`tel:${site.phone.replace(/\s/g, '')}`}>{site.phone}</a></dd></div>}
+        <div><dt><Icon name="location" />Address</dt><dd>{site.address.map((l) => <span>{l}</span>)}</dd></div>
+      </dl>
+      <div class="prose"><Content /></div>
+    </div>
+    {osm && (
+      <figure class="map">
+        <iframe title="Map showing the lab's location" src={osm} loading="lazy"></iframe>
+        <figcaption><a href={`https://www.openstreetmap.org/?mlat=${m!.lat}&mlon=${m!.lon}#map=17/${m!.lat}/${m!.lon}`}>Open a larger map</a> · <a href={`https://www.google.com/maps/search/?api=1&query=${m!.lat},${m!.lon}`}>Google Maps</a> · <a href={`https://neshan.org/maps/@${m!.lat},${m!.lon},17z`}>Neshan</a></figcaption>
+      </figure>
+    )}
+  </div>
+</Base>
+<style>
+  .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: clamp(32px, 5vw, 64px); padding-top: 44px; padding-bottom: 80px; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+  .info { margin: 0 0 36px; }
+  .info div { padding: 14px 0; border-bottom: 1px solid var(--rule); }
+  .info dt { display: flex; align-items: center; gap: 8px; font-size: var(--fs-xs); font-weight: 600; color: var(--muted); }
+  .info dd { margin: 4px 0 0; display: flex; flex-direction: column; font-size: var(--fs-md); }
+  .map { margin: 0; }
+  iframe { width: 100%; aspect-ratio: 4 / 3.4; border: 1px solid var(--rule); border-radius: var(--r-md); background: var(--surface); }
+  figcaption { margin-top: 8px; font-size: var(--fs-sm); color: var(--muted); }
+</style>

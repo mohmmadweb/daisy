@@ -1,0 +1,104 @@
+---
+import Base from '../../layouts/Base.astro';
+import Avatar from '../../components/Avatar.astro';
+import Icon from '../../components/Icon.astro';
+import PubItem from '../../components/PubItem.astro';
+import { load, publications, research, isAlumni, years, roleShort, fmtDate, events, editUrl, site } from '../../lib/data';
+import { render } from 'astro:content';
+export async function getStaticPaths() {
+  return (await load('people')).map((p) => ({ params: { id: p.id }, props: { person: p } }));
+}
+const { person } = Astro.props;
+const d = person.data;
+const { Content } = await render(person);
+const names = new Set([d.name, ...d.aliases]);
+const pubs = (await publications()).filter((p) => p.data.authors.some((a) => names.has(a)));
+const areas = (await research()).filter((a) => d.areas.includes(a.id));
+const news = (await load('news')).filter((n) => n.data.people.includes(person.id)).sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
+const talks = (await events()).all.filter((e) => e.data.people.includes(person.id)).reverse();
+const blog = (await load('blog')).filter((b) => b.data.authors.includes(person.id));
+const alum = isAlumni(person);
+const LINKS: [keyof typeof d.links, string, string][] = [
+  ['website', 'website', 'Website'], ['scholar', 'scholar', 'Google Scholar'], ['github', 'github', 'GitHub'],
+  ['linkedin', 'linkedin', 'LinkedIn'], ['orcid', 'orcid', 'ORCID'], ['dblp', 'dblp', 'DBLP'],
+  ['researchgate', 'researchgate', 'ResearchGate'], ['twitter', 'twitter', 'X'], ['cv', 'cv', 'CV'],
+];
+const edit = editUrl('people', person.id);
+const ld = {
+  '@context': 'https://schema.org', '@type': 'Person', name: d.name, jobTitle: d.title, email: d.email,
+  image: d.photo ? new URL(d.photo, Astro.site).toString() : undefined,
+  affiliation: { '@type': 'CollegeOrUniversity', name: site.university },
+  sameAs: Object.values(d.links).filter(Boolean),
+};
+---
+<Base title={d.name} description={`${d.name}${d.title ? `, ${d.title}` : ''} — ${site.name}, ${site.university}.`} image={d.photo} type="profile" jsonld={ld}>
+  <header class="page-head"><div class="wrap head">
+    <Avatar name={d.name} photo={d.photo} size={200} />
+    <div>
+      <a class="crumb" href={alum ? '/people/#alumni' : '/people/'}>{alum ? 'Alumni' : 'People'}</a>
+      <h1>{d.name}{d.sample && <span class="sample-note">Sample</span>}</h1>
+      {d.name_fa && <p class="fa" lang="fa" dir="rtl">{d.name_fa}</p>}
+      <p class="t">{d.title}</p>
+      <p class="meta">{alum ? `${roleShort(d.role)}, in the lab ${years(person)}` : years(person) && `In the lab ${years(person)}`}</p>
+      {alum && d.next && <p class="now">Now: {d.next}</p>}
+      <ul class="contact">
+        {d.email && <li><a href={`mailto:${d.email}`}><Icon name="email" />{d.email}</a></li>}
+        {d.phone && <li><a href={`tel:${d.phone.replace(/\s/g, '')}`}><Icon name="phone" />{d.phone}</a></li>}
+        {d.office && <li><span><Icon name="location" />{d.office}</span></li>}
+      </ul>
+      <ul class="profiles">
+        {LINKS.filter(([k]) => d.links[k]).map(([k, icon, label]) => <li><a href={d.links[k]} rel="me noopener"><Icon name={icon} />{label}</a></li>)}
+      </ul>
+    </div>
+  </div></header>
+  <div class="wrap detail">
+    <div>
+      <div class="prose"><Content /></div>
+      {d.thesis && (
+        <section class="block"><h2>Thesis</h2>
+          <p class="thesis">{d.thesis.url ? <a href={d.thesis.url}>{d.thesis.title}</a> : d.thesis.title}{d.thesis.year && <span class="meta">, {d.thesis.year}</span>}</p>
+          {d.co_advisor && <p class="meta">Co-advised with {d.co_advisor}</p>}
+        </section>
+      )}
+      {pubs.length > 0 && <section class="block"><h2>Publications ({pubs.length})</h2>{pubs.map((p) => <PubItem pub={p} />)}</section>}
+      {talks.length > 0 && <section class="block"><h2>Talks and events</h2><ul class="plain">{talks.map((e) => <li><a href={`/events/${e.id}/`}>{e.data.title}</a> <span class="meta">{fmtDate(e.data.date)}</span></li>)}</ul></section>}
+      {blog.length > 0 && <section class="block"><h2>Blog posts</h2><ul class="plain">{blog.map((b) => <li><a href={`/blog/${b.id}/`}>{b.data.title}</a> <span class="meta">{fmtDate(b.data.date)}</span></li>)}</ul></section>}
+    </div>
+    <aside>
+      {d.interests.length > 0 && <section><h2>Interests</h2><ul class="chips">{d.interests.map((i) => <li><span class="chip">{i}</span></li>)}</ul></section>}
+      {areas.length > 0 && <section><h2>Research areas</h2><ul>{areas.map((a) => <li><a href={`/research/${a.id}/`}>{a.data.title}</a></li>)}</ul></section>}
+      {d.education.length > 0 && (
+        <section><h2>Education</h2><ol class="tl">{d.education.map((e) => <li><span class="yr">{e.year}</span><span><strong>{e.degree}</strong>{e.field && ` in ${e.field}`}<br /><span class="meta">{e.institution}</span></span></li>)}</ol></section>
+      )}
+      {d.experience.length > 0 && (
+        <section><h2>Experience</h2><ul class="exp">{d.experience.map((e) => <li><strong>{e.title}</strong><span class="meta">{e.org}{e.period && `, ${e.period}`}</span>{e.description && <span>{e.description}</span>}</li>)}</ul></section>
+      )}
+      {news.length > 0 && <section><h2>In the news</h2><ul>{news.slice(0, 5).map((n) => <li><a href={`/news/${n.id}/`}>{n.data.title}</a><br /><span class="meta">{fmtDate(n.data.date)}</span></li>)}</ul></section>}
+      {edit && <section><a class="meta" href={edit}>Edit this profile</a></section>}
+    </aside>
+  </div>
+</Base>
+<style>
+  .head { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: clamp(24px, 4vw, 48px); align-items: start; }
+  .head h1 .sample-note { margin-left: 10px; font-size: 0.8rem; }
+  .fa { font-size: var(--fs-md); color: var(--ink-2); margin-top: 4px; text-align: left; }
+  .t { font-size: var(--fs-md); color: var(--ink-2); margin-top: 8px; }
+  .meta { margin-top: 2px; }
+  .now { margin-top: 8px; font-weight: 550; }
+  .contact, .profiles { list-style: none; padding: 0; margin: 16px 0 0; display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: var(--fs-sm); }
+  .contact a, .contact span, .profiles a { display: inline-flex; align-items: center; gap: 7px; }
+  .contact span { color: var(--ink-2); }
+  .profiles { margin-top: 10px; }
+  .profiles a { padding: 5px 12px; border: 1px solid var(--rule-strong); border-radius: 999px; color: var(--ink); text-decoration: none; background: var(--surface); }
+  .profiles a:hover { border-color: var(--ink); }
+  @media (max-width: 640px) { .head { grid-template-columns: 1fr; } .head :global(.avatar) { width: 140px; height: 140px; } }
+  .thesis { font-family: var(--serif); font-size: 1.1rem; }
+  .plain { padding-left: 1.2em; }
+  .plain li + li { margin-top: 6px; }
+  .tl { list-style: none; padding: 0; margin: 0; }
+  .tl li { display: grid; grid-template-columns: 44px 1fr; gap: 8px; }
+  .tl li + li { margin-top: 12px !important; }
+  .yr { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .exp li { display: flex; flex-direction: column; gap: 2px; }
+  .exp li + li { margin-top: 14px !important; }
+</style>

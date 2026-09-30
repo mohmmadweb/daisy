@@ -1,0 +1,70 @@
+---
+import Authors from './Authors.astro';
+import Icon from './Icon.astro';
+import { pubLinks, bibtex, PUB_TYPES, type Pub } from '../lib/data';
+interface Props { pub: Pub; showYear?: boolean; compact?: boolean }
+const { pub, showYear = true, compact = false } = Astro.props;
+const d = pub.data;
+const links = pubLinks(pub);
+const bib = bibtex(pub);
+---
+<article class="pub" data-pub
+  data-year={d.year} data-type={d.type} data-areas={d.areas.join('|')} data-tags={d.tags.join('|')}
+  data-authors={d.authors.join('|')} data-text={`${d.title} ${d.authors.join(' ')} ${d.venue} ${d.venue_short ?? ''} ${d.tags.join(' ')}`.toLowerCase()}>
+  <h3 class="pub-title"><a href={`/publications/${pub.id}/`}>{d.title}</a>{d.sample && <span class="sample-note">Sample</span>}</h3>
+  <p class="pub-authors"><Authors authors={d.authors} /></p>
+  <p class="pub-venue">
+    <em>{d.venue_short && !d.venue.includes(d.venue_short) && !compact ? `${d.venue} (${d.venue_short})` : d.venue}</em>{showYear && <span>, {d.year}</span>}
+    {d.type === 'preprint' && <span class="kind">{PUB_TYPES[d.type]}</span>}
+    {d.award && <span class="badge"><Icon name="award" size={13} />{d.award}</span>}
+  </p>
+  {!compact && (
+    <div class="pub-links">
+      {links.map((l) => <a href={l.href} rel="noopener">{l.label}</a>)}
+      <details class="bib" data-pagefind-ignore>
+        <summary>BibTeX</summary>
+        <div class="bib-box">
+          <pre><code>{bib}</code></pre>
+          <button type="button" class="copy" data-copy={bib}><Icon name="copy" size={14} /><span>Copy</span></button>
+        </div>
+      </details>
+    </div>
+  )}
+</article>
+
+<script>
+  document.addEventListener('click', async (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-copy]');
+    if (!btn) return;
+    try {
+      await navigator.clipboard.writeText(btn.dataset.copy ?? '');
+      const label = btn.querySelector('span');
+      if (label) { label.textContent = 'Copied'; setTimeout(() => (label.textContent = 'Copy'), 1600); }
+    } catch {}
+  });
+</script>
+
+<style>
+  .pub { padding: 20px 0; border-bottom: 1px solid var(--rule); }
+  .pub:first-child { padding-top: 0; }
+  .pub-title { font-family: var(--serif); font-size: 1.2rem; font-weight: 600; line-height: 1.32; letter-spacing: -0.005em; max-width: 60ch; }
+  .pub-title a { color: var(--ink); text-decoration: none; }
+  .pub-title a:hover { text-decoration: underline; text-decoration-color: var(--daisy); text-decoration-thickness: 2px; }
+  .pub-title .sample-note { margin-left: 8px; }
+  .pub-authors { margin-top: 6px; font-size: var(--fs-sm); line-height: 1.55; }
+  .pub-venue { margin-top: 3px; font-size: var(--fs-sm); color: var(--ink-2); display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+  .pub-venue > em + span { margin-left: -10px; }
+  .kind { color: var(--muted); }
+  .pub-links { margin-top: 10px; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 6px; }
+  .pub-links > a, .bib summary { font-size: var(--fs-xs); font-weight: 550; padding: 3px 10px; border: 1px solid var(--rule-strong); border-radius: var(--r-sm); color: var(--ink-2); text-decoration: none; cursor: pointer; background: var(--surface); line-height: 1.6; }
+  .pub-links > a:hover, .bib summary:hover { border-color: var(--ink); color: var(--ink); }
+  .bib summary { list-style: none; }
+  .bib summary::-webkit-details-marker { display: none; }
+  .bib[open] summary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .bib { flex-basis: auto; }
+  .bib[open] { flex-basis: 100%; }
+  .bib-box { position: relative; margin-top: 8px; }
+  .bib-box pre { margin: 0; font-size: 0.78rem; line-height: 1.55; padding: 14px 16px; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-md); overflow-x: auto; white-space: pre; }
+  .copy { position: absolute; top: 8px; right: 8px; display: inline-flex; align-items: center; gap: 5px; font: inherit; font-size: var(--fs-xs); padding: 3px 9px; border-radius: var(--r-sm); border: 1px solid var(--rule-strong); background: var(--paper); color: var(--ink-2); cursor: pointer; }
+  .copy:hover { color: var(--ink); border-color: var(--ink); }
+</style>

@@ -1,0 +1,12 @@
+---
+import { initials } from '../lib/data';
+interface Props { name: string; photo?: string; size?: number; class?: string }
+const { name, photo, size = 96, class: cls } = Astro.props;
+---
+{photo
+  ? <img class:list={['avatar', cls]} src={photo} alt={`Photo of ${name}`} width={size} height={size} loading="lazy" decoding="async" style={`--s:${size}px`} />
+  : <span class:list={['avatar mono', cls]} style={`--s:${size}px`} aria-hidden="true">{initials(name)}</span>}
+<style>
+  .avatar { width: var(--s); height: var(--s); border-radius: var(--r-md); object-fit: cover; background: var(--rule); flex: none; }
+  .mono { display: inline-grid; place-items: center; background: var(--daisy-soft); color: var(--daisy-ink); font-weight: 600; font-size: calc(var(--s) * 0.32); letter-spacing: 0.02em; }
+</style>

@@ -1,0 +1,7 @@
+# Lab photos. Put the image in public/images/gallery/ and add an entry:
+#
+# - id: lab-retreat-2026
+#   src: /images/gallery/lab-retreat-2026.jpg
+#   caption: Lab retreat, spring 2026
+#   date: 2026-05-12
+[]

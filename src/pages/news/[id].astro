@@ -1,0 +1,44 @@
+---
+import Base from '../../layouts/Base.astro';
+import PubItem from '../../components/PubItem.astro';
+import { load, fmtDate, NEWS_CATEGORIES, slug, byDateDesc, editUrl } from '../../lib/data';
+import { render } from 'astro:content';
+export async function getStaticPaths() {
+  return (await load('news')).map((n) => ({ params: { id: n.id }, props: { item: n } }));
+}
+const { item } = Astro.props;
+const d = item.data;
+const { Content } = await render(item);
+const pub = d.publication ? (await load('publications')).find((p) => p.id === d.publication) : undefined;
+const ppl = (await load('people')).filter((p) => d.people.includes(p.id));
+const recent = (await load('news')).filter((n) => n.id !== item.id).sort(byDateDesc).slice(0, 4);
+const edit = editUrl('news', item.id);
+---
+<Base title={d.title} description={d.summary} image={d.image} type="article">
+  <header class="page-head"><div class="wrap">
+    <a class="crumb" href="/news/">News</a>
+    <p class="meta"><time datetime={d.date.toISOString()}>{fmtDate(d.date)}</time>, {NEWS_CATEGORIES[d.category].toLowerCase()}{d.sample && <span class="sample-note">Sample</span>}</p>
+    <h1>{d.title}</h1>
+    <p class="lede">{d.summary}</p>
+  </div></header>
+  <div class="wrap detail">
+    <div>
+      {d.image && <img class="cover" src={d.image} alt="" />}
+      <div class="prose"><Content /></div>
+      {d.link && <p class="ext"><a class="btn" href={d.link}>Read more</a></p>}
+      {pub && <section class="block"><h2>Related publication</h2><PubItem pub={pub} /></section>}
+    </div>
+    <aside>
+      {ppl.length > 0 && <section><h2>People</h2><ul>{ppl.map((p) => <li><a href={`/people/${p.id}/`}>{p.data.name}</a></li>)}</ul></section>}
+      {d.tags.length > 0 && <section><h2>Topics</h2><ul class="chips">{d.tags.map((t) => <li><a class="chip" href={`/tags/${slug(t)}/`}>{t}</a></li>)}</ul></section>}
+      <section><h2>Recent news</h2><ul>{recent.map((n) => <li><a href={`/news/${n.id}/`}>{n.data.title}</a></li>)}</ul></section>
+      {edit && <section><a class="meta" href={edit}>Edit this page</a></section>}
+    </aside>
+  </div>
+</Base>
+<style>
+  .meta .sample-note { margin-left: 8px; }
+  h1 { margin-top: 10px; max-width: 26ch; }
+  .cover { border-radius: var(--r-md); margin-bottom: 28px; }
+  .ext { margin-top: 24px; }
+</style>

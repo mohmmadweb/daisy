@@ -1,0 +1,48 @@
+---
+import Base from '../../layouts/Base.astro';
+import NewsItem from '../../components/NewsItem.astro';
+import Icon from '../../components/Icon.astro';
+import { load, byDateDesc, NEWS_CATEGORIES } from '../../lib/data';
+const news = (await load('news')).sort(byDateDesc);
+const cats = Object.keys(NEWS_CATEGORIES).filter((c) => news.some((n) => n.data.category === c));
+const years = [...new Set(news.map((n) => n.data.date.getFullYear()))];
+---
+<Base title="News" description="Papers, awards, talks, theses and announcements from the lab.">
+  <header class="page-head"><div class="wrap">
+    <h1>News</h1>
+    <p class="lede">Papers, awards, talks, theses and announcements from the lab.</p>
+    <p class="feeds"><a href="/rss.xml"><Icon name="rss" />Subscribe with RSS</a></p>
+  </div></header>
+  <div class="wrap page">
+    {cats.length > 1 && (
+      <div class="seg" role="group" aria-label="Filter by category">
+        <button type="button" aria-pressed="true" data-cat="">All</button>
+        {cats.map((c) => <button type="button" aria-pressed="false" data-cat={c}>{NEWS_CATEGORIES[c]}</button>)}
+      </div>
+    )}
+    {years.map((y) => (
+      <section data-group>
+        <h2 class="y">{y}</h2>
+        {news.filter((n) => n.data.date.getFullYear() === y).map((n) => <NewsItem item={n} />)}
+      </section>
+    ))}
+  </div>
+</Base>
+<script>
+  const btns = document.querySelectorAll<HTMLButtonElement>('[data-cat]');
+  btns.forEach((b) => b.addEventListener('click', () => {
+    btns.forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    document.querySelectorAll<HTMLElement>('.news').forEach((n) => (n.hidden = !!b.dataset.cat && n.dataset.category !== b.dataset.cat));
+    document.querySelectorAll<HTMLElement>('[data-group]').forEach((g) => (g.hidden = !g.querySelector('.news:not([hidden])')));
+  }));
+</script>
+<style>
+  .page { padding-top: 28px; padding-bottom: 80px; }
+  .feeds { margin-top: 18px; font-size: var(--fs-sm); }
+  .feeds a { display: inline-flex; gap: 6px; align-items: center; }
+  .y { font-family: var(--serif); font-weight: 500; color: var(--muted); font-size: 1.6rem; margin-top: 36px; padding-bottom: 6px; border-bottom: 1px solid var(--rule-strong); }
+  .seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--rule-strong); border-radius: var(--r-sm); overflow: hidden; }
+  .seg button { font: inherit; font-size: var(--fs-xs); font-weight: 550; padding: 7px 13px; border: 0; background: var(--surface); color: var(--ink-2); cursor: pointer; }
+  .seg button + button { border-left: 1px solid var(--rule-strong); }
+  .seg button[aria-pressed='true'] { background: var(--ink); color: var(--paper); }
+</style>

@@ -1,0 +1,87 @@
+---
+import Base from '../../layouts/Base.astro';
+import Authors from '../../components/Authors.astro';
+import PubItem from '../../components/PubItem.astro';
+import Icon from '../../components/Icon.astro';
+import { publications, research, pubLinks, bibtex, fmtDate, PUB_TYPES, authorIndex, slug, load, editUrl } from '../../lib/data';
+import { render } from 'astro:content';
+export async function getStaticPaths() {
+  return (await publications()).map((p) => ({ params: { id: p.id }, props: { pub: p } }));
+}
+const { pub } = Astro.props;
+const d = pub.data;
+const { Content } = await render(pub);
+const all = await publications();
+const areas = (await research()).filter((a) => d.areas.includes(a.id));
+const find = await authorIndex();
+const members = [...new Map(d.authors.map(find).filter(Boolean).map((p) => [p!.id, p!])).values()];
+const score = (p: typeof pub) => p.data.tags.filter((t) => d.tags.includes(t)).length * 2 + p.data.areas.filter((a) => d.areas.includes(a)).length;
+const related = all.filter((p) => p.id !== pub.id).map((p) => [p, score(p)] as const).filter(([, s]) => s > 0).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([p]) => p);
+const news = (await load('news')).filter((n) => n.data.publication === pub.id);
+const projects = (await load('projects')).filter((p) => p.data.publication === pub.id);
+const bib = bibtex(pub);
+const edit = editUrl('publications', pub.id);
+const ld = {
+  '@context': 'https://schema.org', '@type': 'ScholarlyArticle', headline: d.title, name: d.title,
+  author: d.authors.map((a) => ({ '@type': 'Person', name: a })), datePublished: (d.date ?? new Date(Date.UTC(d.year, 0, 1))).toISOString().slice(0, 10),
+  isPartOf: { '@type': 'Periodical', name: d.venue }, abstract: d.abstract, keywords: d.tags.join(', '),
+  ...(d.doi ? { sameAs: `https://doi.org/${d.doi}` } : {}),
+};
+---
+<Base title={d.title} description={d.abstract?.slice(0, 200) ?? `${d.authors.join(', ')}. ${d.venue}, ${d.year}.`} type="article" jsonld={ld}>
+  <Fragment slot="head">
+    <meta name="citation_title" content={d.title} />
+    {d.authors.map((a) => <meta name="citation_author" content={a} />)}
+    <meta name="citation_publication_date" content={String(d.year)} />
+    {d.type === 'journal' ? <meta name="citation_journal_title" content={d.venue} /> : <meta name="citation_conference_title" content={d.venue} />}
+    {d.doi && <meta name="citation_doi" content={d.doi} />}
+    {d.pdf && <meta name="citation_pdf_url" content={new URL(d.pdf, Astro.site)} />}
+    {d.arxiv && <meta name="citation_arxiv_id" content={d.arxiv} />}
+  </Fragment>
+  <header class="page-head"><div class="wrap">
+    <a class="crumb" href="/publications/">Publications</a>
+    <h1 class="title">{d.title}</h1>
+    <p class="authors"><Authors authors={d.authors} /></p>
+    <p class="venue"><em>{d.venue}</em>{d.date ? `, ${fmtDate(d.date)}` : `, ${d.year}`}
+      {d.type === 'preprint' && <span class="meta"> {PUB_TYPES[d.type]}</span>}
+      {d.award && <span class="badge"><Icon name="award" size={13} />{d.award}</span>}
+      {d.sample && <span class="sample-note">Sample</span>}</p>
+    <p class="links">{pubLinks(pub).map((l) => <a class="btn" href={l.href} rel="noopener">{l.label}</a>)}</p>
+  </div></header>
+  <div class="wrap detail">
+    <div>
+      {d.abstract && <section class="block"><h2>Abstract</h2><p class="prose">{d.abstract}</p></section>}
+      {pub.body?.trim() && <section class="block"><h2>In short</h2><div class="prose"><Content /></div></section>}
+      <section class="block">
+        <h2>Cite this paper</h2>
+        <div class="bib"><pre><code>{bib}</code></pre><button type="button" class="copy" data-copy={bib}><Icon name="copy" size={14} /><span>Copy</span></button></div>
+      </section>
+      {related.length > 0 && <section class="block"><h2>Related work</h2>{related.map((p) => <PubItem pub={p} compact />)}</section>}
+    </div>
+    <aside>
+      {areas.length > 0 && <section><h2>Research areas</h2><ul>{areas.map((a) => <li><a href={`/research/${a.id}/`}>{a.data.title}</a></li>)}</ul></section>}
+      {d.tags.length > 0 && <section><h2>Topics</h2><ul class="chips">{d.tags.map((t) => <li><a class="chip" href={`/tags/${slug(t)}/`}>{t}</a></li>)}</ul></section>}
+      {members.length > 0 && <section><h2>Lab authors</h2><ul>{members.map((m) => <li><a href={`/people/${m.id}/`}>{m.data.name}</a></li>)}</ul></section>}
+      {projects.length > 0 && <section><h2>Released with this paper</h2><ul>{projects.map((p) => <li><a href={`/software/${p.id}/`}>{p.data.title}</a></li>)}</ul></section>}
+      {news.length > 0 && <section><h2>In the news</h2><ul>{news.map((n) => <li><a href={`/news/${n.id}/`}>{n.data.title}</a></li>)}</ul></section>}
+      {edit && <section><a class="meta" href={edit}>Edit this page</a></section>}
+    </aside>
+  </div>
+</Base>
+<script>
+  document.addEventListener('click', async (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.bib button[data-copy]');
+    if (!btn) return;
+    try { await navigator.clipboard.writeText(btn.dataset.copy ?? ''); const s = btn.querySelector('span'); if (s) { s.textContent = 'Copied'; setTimeout(() => (s.textContent = 'Copy'), 1600); } } catch {}
+  });
+</script>
+<style>
+  .title { font-family: var(--serif); font-size: var(--fs-2xl); max-width: 30ch; line-height: 1.15; }
+  .authors { margin-top: 18px; font-size: var(--fs-md); }
+  .venue { margin-top: 6px; color: var(--ink-2); display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; }
+  .links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+  .links .btn { padding: 6px 14px; }
+  .bib { position: relative; }
+  .bib pre { margin: 0; font-size: 0.8rem; line-height: 1.6; padding: 18px; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-md); overflow-x: auto; }
+  .copy { position: absolute; top: 10px; right: 10px; display: inline-flex; align-items: center; gap: 5px; font: inherit; font-size: var(--fs-xs); padding: 4px 10px; border-radius: var(--r-sm); border: 1px solid var(--rule-strong); background: var(--paper); color: var(--ink-2); cursor: pointer; }
+</style>

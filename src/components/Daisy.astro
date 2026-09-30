@@ -1,0 +1,108 @@
+---
+// The home-page diagram: one petal per research direction around a centre of
+// "data". Each dot inside a petal is one publication in that direction; dashed
+// petals are directions the lab opened recently. Adding a file to
+// content/research adds a petal.
+import { research, publications } from '../lib/data';
+
+const areas = await research();
+const pubs = await publications();
+const n = areas.length || 1;
+const W = 760, H = 700, cx = W / 2, cy = H / 2;
+const r0 = 56, len = 196, w = 80, R = r0 + len + 20;
+const LH = 25;
+const rad = (deg: number) => (deg * Math.PI) / 180;
+
+const petals = areas.map((a, i) => {
+  const angle = (360 / n) * i;
+  const count = pubs.filter((p) => p.data.areas.includes(a.id)).length;
+  const s = Math.sin(rad(angle)), c = Math.cos(rad(angle));
+  const lx = cx + R * s, ly = cy - R * c;
+  const anchor = s > 0.25 ? 'start' : s < -0.25 ? 'end' : 'middle';
+  const label = (a.data.short ?? a.data.title).split(' ');
+  // Break a label into at most two lines of roughly equal length.
+  let lines = [label.join(' ')];
+  if (label.join(' ').length > 12 && label.length > 1) {
+    let best = 1, diff = Infinity;
+    for (let k = 1; k < label.length; k++) {
+      const d = Math.abs(label.slice(0, k).join(' ').length - label.slice(k).join(' ').length);
+      if (d < diff) { diff = d; best = k; }
+    }
+    lines = [label.slice(0, best).join(' '), label.slice(best).join(' ')];
+  }
+  const dy = c < -0.5 ? 24 : c > 0.5 ? -(lines.length - 1) * LH - 6 : -((lines.length - 1) * LH) / 2 + 7;
+  const dots = Array.from({ length: Math.min(count, 10) }, (_, k) => r0 + len - 26 - k * 16);
+  return { a, i, angle, count, lx, ly, anchor, lines, dy, dots };
+});
+---
+<figure class="daisy" data-daisy>
+  <svg viewBox={`0 0 ${W} ${H}`} role="group" aria-labelledby="daisy-title">
+    <title id="daisy-title">Research directions of the lab, arranged as petals around data</title>
+    <g transform={`translate(${cx} ${cy})`}>
+      {petals.map((p) => (
+        <a href={`/research/${p.a.id}/`} class:list={['petal', { fresh: p.a.data.status === 'new' }]} data-i={p.i} style={`--i:${p.i}`}
+           aria-label={`${p.a.data.title}: ${p.count} publication${p.count === 1 ? '' : 's'}`}>
+          <g transform={`rotate(${p.angle})`}>
+            <g class="grow">
+              <rect x={-w / 2} y={-(r0 + len)} width={w} height={len} rx={w / 2} />
+              {p.dots.map((y) => <circle cx="0" cy={-y} r="5.2" />)}
+            </g>
+          </g>
+        </a>
+      ))}
+      <circle class="core" r={r0 + 8} />
+      <text class="core-t" text-anchor="middle" dy="9">data</text>
+    </g>
+    {petals.map((p) => (
+      <text class="label" data-i={p.i} x={p.lx} y={p.ly + p.dy} text-anchor={p.anchor} aria-hidden="true">
+        {p.lines.map((l, k) => <tspan x={p.lx} dy={k === 0 ? 0 : LH}>{l}</tspan>)}
+      </text>
+    ))}
+  </svg>
+  <figcaption>
+    <span class="key"><svg width="22" height="12" aria-hidden="true"><circle cx="6" cy="6" r="4" /></svg>one publication</span>
+    <span class="key"><svg width="30" height="14" aria-hidden="true"><rect x="1" y="2" width="28" height="10" rx="5" class="k-new" /></svg>new direction</span>
+  </figcaption>
+</figure>
+
+<script>
+  // Hovering a petal highlights its label; hovering a legend row highlights its petal.
+  for (const fig of document.querySelectorAll<HTMLElement>('[data-daisy]')) {
+    const set = (i: string | null) => {
+      fig.querySelectorAll('[data-i]').forEach((el) => el.classList.toggle('on', el.getAttribute('data-i') === i));
+      document.querySelectorAll('[data-area-i]').forEach((el) => el.classList.toggle('on', el.getAttribute('data-area-i') === i));
+    };
+    fig.querySelectorAll<SVGElement>('.petal').forEach((p) => {
+      p.addEventListener('pointerenter', () => set(p.dataset.i ?? null));
+      p.addEventListener('focus', () => set(p.dataset.i ?? null));
+      p.addEventListener('pointerleave', () => set(null));
+      p.addEventListener('blur', () => set(null));
+    });
+    document.querySelectorAll<HTMLElement>('[data-area-i]').forEach((row) => {
+      row.addEventListener('pointerenter', () => set(row.dataset.areaI ?? null));
+      row.addEventListener('pointerleave', () => set(null));
+    });
+  }
+</script>
+
+<style>
+  .daisy { margin: 0; }
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .petal rect { fill: var(--surface); stroke: var(--ink); stroke-width: 3; transition: fill 0.2s; }
+  .petal.fresh rect { stroke-dasharray: 7 6; }
+  .petal circle { fill: var(--ink); }
+  .petal:hover rect, .petal:focus-visible rect, .petal.on rect { fill: var(--daisy); }
+  .petal:hover circle, .petal.on circle { fill: #1b1e22; }
+  .petal:focus-visible { outline: none; }
+  .core { fill: var(--daisy); stroke: var(--ink); stroke-width: 2.5; }
+  .core-t { font-family: var(--serif); font-style: italic; font-size: 32px; fill: #1b1e22; font-weight: 500; }
+  .label { font-family: var(--sans); font-size: 21px; font-weight: 550; fill: var(--ink-2); transition: fill 0.2s; }
+  .label.on { fill: var(--ink); }
+  .grow { transform-box: view-box; transform-origin: 0 0; animation: bloom 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both; animation-delay: calc(var(--i) * 90ms + 150ms); }
+  @keyframes bloom { from { transform: scale(0.15); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  figcaption { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 22px; margin-top: 4px; font-size: var(--fs-xs); color: var(--muted); }
+  .key { display: inline-flex; align-items: center; gap: 6px; }
+  .key circle { fill: var(--ink); }
+  .k-new { fill: none; stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 4 3; }
+  @media (max-width: 560px) { .label { font-size: 25px; } }
+</style>

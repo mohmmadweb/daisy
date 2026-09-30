@@ -1,0 +1,15 @@
+---
+// The DAISY mark: eight petals around a yellow centre, inside an open ring.
+interface Props { size?: number }
+const { size = 34 } = Astro.props;
+const petals = [0, 45, 90, 135, 180, 225, 270, 315];
+---
+<svg class="logo" width={size} height={size} viewBox="0 0 200 200" fill="none" aria-hidden="true">
+  <path d="M100 16a84 84 0 1 0 64.35 137.99" stroke="currentColor" stroke-width="10" stroke-linecap="round" />
+  <circle cx="100" cy="16" r="12" fill="currentColor" />
+  <circle cx="100" cy="184" r="12" fill="currentColor" />
+  <g transform="translate(100 100)" stroke="currentColor" stroke-width="6" stroke-linejoin="round">
+    {petals.map((a) => <rect x="-10.5" y="-61" width="21" height="40" rx="10.5" transform={`rotate(${a})`} fill="var(--paper)" />)}
+    <circle r="19" fill="#f2c434" />
+  </g>
+</svg>
