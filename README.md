@@ -10,7 +10,7 @@ The design lives in `src/`; everything you see on the site lives in `content/` a
 
 | Way | Best for | How |
 |---|---|---|
-| Web editor | Everyone, no Git needed | Sign in at [app.pagescms.org](https://app.pagescms.org) with GitHub and open `mohmmadweb/daisy`. Forms for people, papers, news, events… |
+| Content manager | Everyone, no Git needed | Open **https://daisy-lab.ir/admin/** and sign in with GitHub. Forms for people, papers, news, events, settings… |
 | GitHub website | Quick text fixes | Every page has an *Edit this page* link at the bottom that opens its file on GitHub. |
 | Command line | Bulk work | Clone, edit, `npm run dev`, commit, push. Helper scripts below. |
 
@@ -30,7 +30,7 @@ The design lives in `src/`; everything you see on the site lives in `content/` a
 | `content/gallery.yml` | Lab photos (images in `public/images/gallery/`). |
 | `public/images/` | Photos and logos. |
 
-Files starting with `_` (e.g. `people/_template.md`) are templates and are not published.
+Blank templates for a person and a paper are in `templates/`.
 Any entry can have `draft: true` (hidden) or `sample: true` (hidden when `show_samples: false`).
 
 Sections with no entries (blog, gallery, events, …) disappear from the menu automatically.
@@ -57,12 +57,13 @@ npm run graduate -- ali-rezaei 2027 "PhD student, EPFL" academia
 npm run build                                 # full build + search index into dist/
 ```
 
-The *Add a paper from DOI or arXiv* workflow does the same as `add-paper` from the GitHub Actions tab or from the Pages CMS action button, then commits and republishes.
+The *Add a paper from DOI or arXiv* workflow (GitHub → Actions) does the same as `add-paper`, then commits and republishes.
 
 ## How it is built
 
 - [Astro](https://astro.build) static site; content collections with schemas in `src/content.config.ts`. A wrong field fails the build with the file name and the field, and the live site keeps its previous version.
 - Search: [Pagefind](https://pagefind.app), built after Astro.
+- Content manager: [Sveltia CMS](https://sveltiacms.app) at `/admin/`, configured in `public/admin/config.yml`. The bundle is copied from `node_modules` at build time (`scripts/vendor-cms.mjs`), so no third-party CDN is needed. GitHub sign-in goes through `auth-worker/`, a Cloudflare Worker on `auth.daisy-lab.ir`.
 - Fonts are self-hosted (IBM Plex Sans, Source Serif 4, IBM Plex Mono) so the site loads without Google Fonts.
 - `.github/workflows/deploy.yml` builds on every push to `main` and nightly, and publishes to GitHub Pages. The custom domain is set by `public/CNAME`.
 - Feeds and machine-readable output: `/rss.xml`, `/events.ics`, `/publications.bib`, `/sitemap-index.xml`, JSON-LD and Google Scholar `citation_*` tags on paper pages.

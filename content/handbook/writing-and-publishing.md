@@ -12,4 +12,4 @@ sample: true
 
 ## Adding a paper to the website
 
-Create a file in `content/publications/` (copy `_template.md`), fill in the fields, and commit. The site rebuilds in about two minutes.
+Open the content manager at [/admin/](/admin/), choose Publications → New, fill in the form and save. The site rebuilds in about two minutes.

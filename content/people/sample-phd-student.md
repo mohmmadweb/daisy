@@ -12,4 +12,4 @@ links:
 sample: true
 ---
 
-This is a sample profile so the People page has something to show. Copy `content/people/_template.md`, rename it to the member's id, fill in the fields and write a short biography here.
+This is a sample profile so the People page has something to show. Add real members from the content manager at /admin/ (People → New), or copy `templates/person.md` into `content/people/`.

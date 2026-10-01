@@ -1,0 +1,437 @@
+# Content manager at https://daisy-lab.ir/admin/ (Sveltia CMS).
+# Sign-in goes through the lab's own authenticator at auth.daisy-lab.ir.
+# Anyone with write access to github.com/mohmmadweb/daisy can sign in.
+
+backend:
+  name: github
+  repo: mohmmadweb/daisy
+  branch: main
+  base_url: https://auth.daisy-lab.ir
+  auth_scope: public_repo  # the repo is public, so members never grant access to their private repos
+  commit_messages:
+    create: "Add {{collection}} “{{slug}}”"
+    update: "Update {{collection}} “{{slug}}”"
+    delete: "Delete {{collection}} “{{slug}}”"
+    uploadMedia: "Upload “{{path}}”"
+    deleteMedia: "Delete “{{path}}”"
+
+site_url: https://daisy-lab.ir
+display_url: https://daisy-lab.ir
+logo_url: /favicon.svg
+media_folder: public/images
+public_folder: /images
+slug:
+  encoding: ascii
+  clean_accents: true
+  maxlength: 70
+
+collections:
+  # ── People ────────────────────────────────────────────────
+  - name: people
+    label: People
+    label_singular: Person
+    folder: content/people
+    create: true
+    slug: "{{name}}"
+    preview_path: "people/{{slug}}/"
+    summary: "{{name}} — {{role}}"
+    sortable_fields: [name, role, start, end]
+    view_groups:
+      - { label: Role, field: role }
+    fields:
+      - { name: name, label: Full name, widget: string }
+      - { name: name_fa, label: Name in Persian, widget: string, required: false }
+      - name: role
+        label: Role
+        widget: select
+        default: phd
+        options:
+          - { label: Faculty, value: faculty }
+          - { label: Postdoc, value: postdoc }
+          - { label: PhD student, value: phd }
+          - { label: MSc student, value: msc }
+          - { label: Undergraduate, value: bsc }
+          - { label: Staff, value: staff }
+          - { label: Visitor, value: visitor }
+          - { label: Affiliated researcher, value: affiliate }
+      - { name: title, label: Title shown under the name, widget: string, required: false, hint: "e.g. PhD Student in Computer Engineering" }
+      - { name: photo, label: Photo, widget: image, required: false, hint: "Square, at least 400×400 pixels" }
+      - { name: email, label: Email, widget: string, required: false }
+      - { name: phone, label: Phone, widget: string, required: false }
+      - { name: office, label: Office, widget: string, required: false }
+      - { name: start, label: Year joined, widget: number, value_type: int, required: false }
+      - { name: end, label: Year left — fill this in when they graduate and they move to Alumni, widget: number, value_type: int, required: false }
+      - { name: next, label: Where they went after the lab, widget: string, required: false, hint: "e.g. PhD student, EPFL" }
+      - { name: next_type, label: Type of next position, widget: select, options: [academia, industry, startup, other], required: false }
+      - name: thesis
+        label: Thesis
+        widget: object
+        required: false
+        collapsed: true
+        fields:
+          - { name: title, label: Title, widget: string, required: false }
+          - { name: url, label: Link to full text, widget: string, required: false }
+          - { name: year, label: Year, widget: number, value_type: int, required: false }
+      - { name: co_advisor, label: Co-advisor, widget: string, required: false }
+      - { name: interests, label: Research interests, widget: list, required: false }
+      - &areas { name: areas, label: Research areas, widget: relation, collection: research, value_field: "{{slug}}", search_fields: [title], display_fields: [title], multiple: true, required: false }
+      - { name: aliases, label: Other spellings of the name in papers, widget: list, required: false, hint: "e.g. M. Ramezani" }
+      - name: links
+        label: Profiles
+        widget: object
+        required: false
+        collapsed: true
+        fields:
+          - { name: website, label: Personal website, widget: string, required: false }
+          - { name: scholar, label: Google Scholar, widget: string, required: false }
+          - { name: github, label: GitHub, widget: string, required: false }
+          - { name: linkedin, label: LinkedIn, widget: string, required: false }
+          - { name: orcid, label: ORCID, widget: string, required: false }
+          - { name: dblp, label: DBLP, widget: string, required: false }
+          - { name: researchgate, label: ResearchGate, widget: string, required: false }
+          - { name: twitter, label: X / Twitter, widget: string, required: false }
+          - { name: cv, label: CV (link), widget: string, required: false }
+      - name: education
+        label: Education
+        widget: list
+        required: false
+        summary: "{{degree}}, {{institution}} ({{year}})"
+        fields:
+          - { name: degree, label: Degree, widget: string }
+          - { name: field, label: Field, widget: string, required: false }
+          - { name: institution, label: Institution, widget: string }
+          - { name: year, label: Year, widget: number, value_type: int, required: false }
+      - name: experience
+        label: Experience
+        widget: list
+        required: false
+        summary: "{{title}}, {{org}}"
+        fields:
+          - { name: title, label: Position, widget: string }
+          - { name: org, label: Organisation, widget: string }
+          - { name: period, label: Period, widget: string, required: false }
+          - { name: description, label: Description, widget: text, required: false }
+      - &order { name: order, label: Order (lower first), widget: number, value_type: int, default: 99, required: false }
+      - &sample { name: sample, label: Sample entry (hidden when samples are switched off), widget: boolean, default: false, required: false }
+      - &draft { name: draft, label: Draft (not shown on the site), widget: boolean, default: false, required: false }
+      - { name: body, label: Biography, widget: markdown, required: false }
+
+  # ── Publications ──────────────────────────────────────────
+  - name: publications
+    label: Publications
+    label_singular: Publication
+    folder: content/publications
+    create: true
+    slug: "{{year}}-{{title}}"
+    preview_path: "publications/{{slug}}/"
+    summary: "{{year}} — {{title}}"
+    sortable_fields: [year, title]
+    view_groups:
+      - { label: Year, field: year }
+      - { label: Type, field: type }
+    fields:
+      - { name: title, label: Title, widget: string }
+      - { name: authors, label: Authors (in order), widget: list, hint: "One name per line. Lab members are linked to their profile automatically." }
+      - { name: venue, label: Venue, widget: string, hint: "Journal or conference name, or: arXiv preprint" }
+      - { name: venue_short, label: Venue abbreviation, widget: string, required: false, hint: "e.g. VLDB, SIGMOD, ACM TKDD" }
+      - { name: year, label: Year, widget: number, value_type: int }
+      - { name: date, label: Publication date, widget: datetime, time_format: false, format: YYYY-MM-DD, required: false }
+      - { name: type, label: Type, widget: select, default: conference, options: [journal, conference, workshop, preprint, chapter, thesis, other] }
+      - { name: doi, label: DOI, widget: string, required: false, hint: "Only the DOI, e.g. 10.1038/s41598-024-82286-x" }
+      - { name: arxiv, label: arXiv id, widget: string, required: false, hint: "e.g. 2504.10753" }
+      - { name: url, label: Publisher page, widget: string, required: false }
+      - { name: pdf, label: PDF (upload or link), widget: file, required: false }
+      - { name: code, label: Code repository, widget: string, required: false }
+      - { name: data, label: Data, widget: string, required: false }
+      - { name: slides, label: Slides (upload or link), widget: file, required: false }
+      - { name: video, label: Video, widget: string, required: false }
+      - { name: poster, label: Poster, widget: file, required: false }
+      - { name: website, label: Project website, widget: string, required: false }
+      - { name: award, label: Award, widget: string, required: false, hint: "e.g. Best Paper Award" }
+      - { name: selected, label: Show on the home page, widget: boolean, default: false, required: false }
+      - *areas
+      - &tags { name: tags, label: Topics, widget: list, required: false }
+      - { name: abstract, label: Abstract, widget: text, required: false }
+      - { name: bibtex, label: Custom BibTeX (optional — generated automatically otherwise), widget: code, output_code_only: true, default_language: latex, required: false }
+      - *sample
+      - *draft
+      - { name: body, label: Plain-language summary, widget: markdown, required: false }
+
+  # ── News ──────────────────────────────────────────────────
+  - name: news
+    label: News
+    label_singular: News item
+    folder: content/news
+    create: true
+    slug: "{{year}}-{{month}}-{{day}}-{{title}}"
+    preview_path: "news/{{slug}}/"
+    summary: "{{date | date('YYYY-MM-DD')}} — {{title}}"
+    sortable_fields: [date, title]
+    fields:
+      - { name: title, label: Headline, widget: string }
+      - { name: date, label: Date, widget: datetime, time_format: false, format: YYYY-MM-DD }
+      - { name: category, label: Category, widget: select, default: announcement, options: [announcement, publication, award, talk, people, event, media, thesis] }
+      - { name: summary, label: One-sentence summary, widget: text }
+      - &people { name: people, label: People involved, widget: relation, collection: people, value_field: "{{slug}}", search_fields: [name], display_fields: [name], multiple: true, required: false }
+      - { name: publication, label: Related publication, widget: relation, collection: publications, value_field: "{{slug}}", search_fields: [title], display_fields: [title], required: false }
+      - { name: link, label: External link, widget: string, required: false }
+      - { name: image, label: Image, widget: image, required: false }
+      - *tags
+      - *sample
+      - *draft
+      - { name: body, label: Full story, widget: markdown, required: false }
+
+  # ── Events ────────────────────────────────────────────────
+  - name: events
+    label: Events and seminars
+    label_singular: Event
+    folder: content/events
+    create: true
+    slug: "{{year}}-{{month}}-{{day}}-{{title}}"
+    preview_path: "events/{{slug}}/"
+    summary: "{{date | date('YYYY-MM-DD HH:mm')}} — {{title}}"
+    sortable_fields: [date, title]
+    fields:
+      - { name: title, label: Title, widget: string }
+      - name: type
+        label: Type
+        widget: select
+        default: seminar
+        options:
+          - { label: Seminar, value: seminar }
+          - { label: Reading group, value: reading-group }
+          - { label: Talk, value: talk }
+          - { label: Workshop, value: workshop }
+          - { label: Thesis defence, value: defense }
+          - { label: Social, value: social }
+      - { name: series, label: Series, widget: string, required: false, hint: "e.g. DAISY Seminar" }
+      - { name: date, label: Starts (Tehran time), widget: datetime, format: "YYYY-MM-DDTHH:mm:ssZ" }
+      - { name: end, label: Ends, widget: datetime, format: "YYYY-MM-DDTHH:mm:ssZ", required: false }
+      - { name: speaker, label: Speaker, widget: string, required: false }
+      - { name: affiliation, label: Speaker affiliation, widget: string, required: false }
+      - { name: speaker_url, label: Speaker website, widget: string, required: false }
+      - { name: location, label: Location, widget: string, required: false, default: "Room 821, Department of Computer Engineering" }
+      - { name: online, label: Online meeting link, widget: string, required: false }
+      - { name: slides, label: Slides (after the event), widget: file, required: false }
+      - { name: video, label: Recording (after the event), widget: string, required: false }
+      - *people
+      - *sample
+      - *draft
+      - { name: body, label: Abstract and speaker bio, widget: markdown, required: false }
+
+  # ── Research ──────────────────────────────────────────────
+  - name: research
+    label: Research directions
+    label_singular: Research direction
+    folder: content/research
+    create: true
+    slug: "{{title}}"
+    preview_path: "research/{{slug}}/"
+    sortable_fields: [order, title]
+    fields:
+      - { name: title, label: Title, widget: string }
+      - { name: short, label: Short label for the home-page flower, widget: string, required: false }
+      - { name: summary, label: One-sentence summary, widget: text }
+      - *order
+      - name: status
+        label: Status
+        widget: select
+        default: active
+        options:
+          - { label: Established, value: active }
+          - { label: New direction (dashed petal), value: new }
+          - { label: Past, value: past }
+      - *sample
+      - *draft
+      - { name: body, label: Description, widget: markdown, required: false }
+
+  # ── Software, datasets, benchmarks ────────────────────────
+  - name: projects
+    label: Software and data
+    label_singular: Release
+    folder: content/projects
+    create: true
+    slug: "{{title}}"
+    preview_path: "software/{{slug}}/"
+    fields:
+      - { name: title, label: Name, widget: string }
+      - { name: kind, label: Kind, widget: select, default: software, options: [software, dataset, benchmark, project] }
+      - { name: summary, label: One-sentence summary, widget: text }
+      - { name: status, label: Status, widget: select, default: active, options: [active, archived] }
+      - { name: repo, label: Source code repository, widget: string, required: false }
+      - { name: download, label: Download link, widget: string, required: false }
+      - { name: docs, label: Documentation, widget: string, required: false }
+      - { name: website, label: Website, widget: string, required: false }
+      - { name: license, label: License, widget: string, required: false }
+      - { name: publication, label: Paper that introduced it, widget: relation, collection: publications, value_field: "{{slug}}", search_fields: [title], display_fields: [title], required: false }
+      - *areas
+      - { name: people, label: Maintainers, widget: relation, collection: people, value_field: "{{slug}}", search_fields: [name], display_fields: [name], multiple: true, required: false }
+      - *tags
+      - { name: cite, label: Custom citation (BibTeX), widget: code, output_code_only: true, default_language: latex, required: false }
+      - *order
+      - *sample
+      - *draft
+      - { name: body, label: Description, widget: markdown, required: false }
+
+  # ── Teaching ──────────────────────────────────────────────
+  - name: teaching
+    label: Courses
+    label_singular: Course
+    folder: content/teaching
+    create: true
+    slug: "{{title}}"
+    fields:
+      - { name: code, label: Course code, widget: string, required: false }
+      - { name: title, label: Title, widget: string }
+      - { name: level, label: Level, widget: select, default: graduate, options: [graduate, undergraduate] }
+      - { name: terms, label: Terms offered, widget: list, required: false, hint: "e.g. Fall 2026" }
+      - { name: instructor, label: Instructor, widget: relation, collection: people, value_field: "{{slug}}", search_fields: [name], display_fields: [name], required: false }
+      - { name: website, label: Course website, widget: string, required: false }
+      - *order
+      - *sample
+      - *draft
+      - { name: body, label: Description, widget: markdown, required: false }
+
+  # ── Positions ─────────────────────────────────────────────
+  - name: positions
+    label: Open positions
+    label_singular: Position
+    folder: content/positions
+    create: true
+    slug: "{{title}}"
+    fields:
+      - { name: title, label: Title, widget: string }
+      - { name: level, label: Level, widget: string, hint: "e.g. PhD, MSc, Internship" }
+      - { name: status, label: Status, widget: select, default: open, options: [open, closed] }
+      - { name: summary, label: One-sentence summary, widget: text }
+      - *order
+      - *sample
+      - *draft
+      - { name: body, label: Details, widget: markdown, required: false }
+
+  # ── Blog ──────────────────────────────────────────────────
+  - name: blog
+    label: Blog
+    label_singular: Post
+    folder: content/blog
+    create: true
+    slug: "{{year}}-{{month}}-{{day}}-{{title}}"
+    preview_path: "blog/{{slug}}/"
+    sortable_fields: [date, title]
+    fields:
+      - { name: title, label: Title, widget: string }
+      - { name: date, label: Date, widget: datetime, time_format: false, format: YYYY-MM-DD }
+      - { name: authors, label: Authors, widget: relation, collection: people, value_field: "{{slug}}", search_fields: [name], display_fields: [name], multiple: true, required: false }
+      - { name: summary, label: Summary, widget: text }
+      - { name: cover, label: Cover image, widget: image, required: false }
+      - *tags
+      - *sample
+      - *draft
+      - { name: body, label: Post, widget: markdown }
+
+  # ── Handbook ──────────────────────────────────────────────
+  - name: handbook
+    label: Lab handbook
+    label_singular: Handbook page
+    folder: content/handbook
+    create: true
+    slug: "{{title}}"
+    fields:
+      - { name: title, label: Title, widget: string }
+      - { name: summary, label: Summary, widget: string, required: false }
+      - *order
+      - *sample
+      - *draft
+      - { name: body, label: Content, widget: markdown }
+
+  # ── Fixed pages ───────────────────────────────────────────
+  - name: pages
+    label: Page text
+    folder: content/pages
+    create: false
+    delete: false
+    fields:
+      - { name: title, label: Title, widget: string }
+      - { name: summary, label: Intro sentence, widget: text, required: false }
+      - { name: body, label: Text, widget: markdown }
+
+  # ── Settings and gallery ──────────────────────────────────
+  - name: settings
+    label: Lab settings
+    files:
+      - name: gallery
+        label: Photo gallery
+        file: content/gallery.yml
+        fields:
+          - name: photos
+            label: Photos
+            widget: list
+            root: true
+            summary: "{{caption}}"
+            thumbnail: src
+            fields:
+              - { name: src, label: Photo, widget: image }
+              - { name: caption, label: Caption, widget: string }
+              - { name: date, label: Date, widget: datetime, time_format: false, format: YYYY-MM-DD, required: false }
+      - name: site
+        label: Lab details, contact and admissions
+        file: content/site.yml
+        fields:
+          - { name: name, label: Short name, widget: string }
+          - { name: full_name, label: Full name, widget: string }
+          - { name: tagline, label: Home-page headline, widget: string }
+          - { name: intro, label: Home-page introduction, widget: text }
+          - { name: description, label: Description for search engines, widget: text }
+          - { name: founded, label: Year founded, widget: number, value_type: int, required: false }
+          - { name: university, label: University, widget: string }
+          - { name: university_url, label: University website, widget: string, required: false }
+          - { name: department, label: Department, widget: string }
+          - { name: department_url, label: Department website, widget: string, required: false }
+          - { name: email, label: Contact email, widget: string }
+          - { name: phone, label: Phone, widget: string, required: false }
+          - { name: address, label: Address lines, widget: list }
+          - name: map
+            label: Map pin
+            widget: object
+            required: false
+            fields:
+              - { name: lat, label: Latitude, widget: number, value_type: float }
+              - { name: lon, label: Longitude, widget: number, value_type: float }
+          - name: admissions
+            label: Admissions banner
+            widget: object
+            fields:
+              - { name: accepting, label: Accepting students, widget: boolean }
+              - { name: cycle, label: For which intake, widget: string, required: false, hint: "e.g. the 2027 intake" }
+              - { name: note, label: Extra note, widget: string, required: false }
+          - name: social
+            label: Social media links
+            widget: object
+            required: false
+            collapsed: true
+            fields:
+              - { name: github, label: GitHub, widget: string, required: false }
+              - { name: twitter, label: X / Twitter, widget: string, required: false }
+              - { name: linkedin, label: LinkedIn, widget: string, required: false }
+              - { name: youtube, label: YouTube, widget: string, required: false }
+              - { name: telegram, label: Telegram, widget: string, required: false }
+              - { name: instagram, label: Instagram, widget: string, required: false }
+          - name: sponsors
+            label: Sponsors and funders
+            widget: list
+            required: false
+            summary: "{{name}}"
+            fields:
+              - { name: name, label: Name, widget: string }
+              - { name: url, label: Website, widget: string, required: false }
+              - { name: logo, label: Logo, widget: image, required: false }
+          - name: affiliations
+            label: Affiliations
+            widget: list
+            required: false
+            summary: "{{name}}"
+            fields:
+              - { name: name, label: Name, widget: string }
+              - { name: url, label: Website, widget: string, required: false }
+          - { name: show_samples, label: Show sample entries (switch off once real content is in place), widget: boolean }
+          - { name: repo, label: GitHub repository URL, widget: string, required: false }

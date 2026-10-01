@@ -1,6 +1,6 @@
 name: Add a paper from DOI or arXiv
 
-# Run from the Actions tab ("Run workflow") or from the button in Pages CMS.
+# Run from the Actions tab: "Add a paper from DOI or arXiv" → Run workflow.
 on:
   workflow_dispatch:
     inputs:
@@ -9,7 +9,7 @@ on:
         required: false
         type: string
       payload:
-        description: Filled in automatically by Pages CMS
+        description: Optional JSON payload from an external editor
         required: false
         type: string
 

@@ -3,3 +3,5 @@ dist/
 .astro/
 .DS_Store
 *.log
+public/admin/sveltia-cms.js
+public/admin/chunks/

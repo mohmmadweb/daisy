@@ -1,6 +1,5 @@
 ---
-# Copy this file to people/<first-last>.md (lowercase, hyphens) and fill it in.
-# Files whose name starts with "_" are ignored by the site.
+# Copy this file to content/people/<first-last>.md (lowercase, hyphens) and fill it in.
 name: First Last
 name_fa: ""                 # optional, name in Persian
 role: phd                   # faculty | postdoc | phd | msc | bsc | staff | visitor | affiliate

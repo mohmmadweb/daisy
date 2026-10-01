@@ -1,0 +1,18 @@
+# GitHub sign-in for the content manager at https://daisy-lab.ir/admin/.
+# Upstream: https://github.com/sveltia/sveltia-cms-auth (MIT).
+name = "daisy-lab-auth"
+main = "src/index.js"
+compatibility_date = "2024-09-01"
+workers_dev = false
+
+# Served on the lab's own domain. Requires daisy-lab.ir to use Cloudflare DNS.
+routes = [{ pattern = "auth.daisy-lab.ir", custom_domain = true }]
+
+[vars]
+# Only pages on these hosts can receive a sign-in token.
+ALLOWED_DOMAINS = "daisy-lab.ir, www.daisy-lab.ir"
+
+# Secrets (set in the Cloudflare dashboard → Settings → Variables and Secrets,
+# or with `npx wrangler secret put <NAME>`):
+#   GITHUB_CLIENT_ID      — from the GitHub OAuth app
+#   GITHUB_CLIENT_SECRET  — from the GitHub OAuth app

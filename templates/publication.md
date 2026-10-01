@@ -1,5 +1,5 @@
 ---
-# Copy to publications/<short-id>.md. Files starting with "_" are ignored.
+# Copy to content/publications/<year>-<short-title>.md and fill it in.
 title: Paper title
 authors: [First Author, Maryam Ramezani]   # lab members are linked automatically
 venue: Full venue name
