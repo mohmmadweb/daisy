@@ -5,3 +5,7 @@ dist/
 *.log
 public/admin/sveltia-cms.js
 public/admin/chunks/
+
+# Local secrets (never committed)
+.env
+.env.*
