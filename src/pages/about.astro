@@ -1,6 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
-import { site, people, publications, research, load } from '../lib/data';
+import { site, people, publications, research, load, totalCitations } from '../lib/data';
 import { getEntry, render } from 'astro:content';
 const page = (await getEntry('pages', 'about'))!;
 const { Content } = await render(page);
@@ -9,7 +9,7 @@ const pubs = await publications();
 const areas = await research();
 const releases = await load('projects');
 const facts = [
-  [areas.length, 'research directions'], [pubs.length, 'publications'], [current.length, 'current members'],
+  [areas.length, 'research directions'], [pubs.length, 'publications'], [totalCitations(), 'citations (OpenAlex)'], [current.length, 'current members'],
   [alumni.length, 'alumni'], [releases.length, 'software and data releases'],
 ].filter(([n]) => (n as number) > 0);
 ---

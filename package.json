@@ -12,7 +12,7 @@
     "add-paper": "node scripts/add-paper.mjs",
     "graduate": "node scripts/graduate.mjs",
     "predev": "node scripts/vendor-cms.mjs",
-    "prebuild": "node scripts/vendor-cms.mjs"
+    "prebuild": "node scripts/fetch-citations.mjs; node scripts/vendor-cms.mjs"
   },
   "dependencies": {
     "@astrojs/rss": "^4.0.19",

@@ -13,6 +13,12 @@ export type Site = {
   show_samples: boolean; repo?: string;
 };
 
+import citationData from '../data/citations.json';
+const CITES = citationData as Record<string, { count: number; openalex?: string }>;
+/** Citation count from OpenAlex (refreshed on every build), if known. */
+export const citations = (id: string) => CITES[id];
+export const totalCitations = () => Object.values(CITES).reduce((n, c) => n + (c.count ?? 0), 0);
+
 export const site: Site = parse(fs.readFileSync('./content/site.yml', 'utf8'));
 
 /** Every published entry of a collection, with samples hidden when switched off. */

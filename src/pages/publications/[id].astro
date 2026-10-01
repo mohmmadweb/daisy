@@ -3,7 +3,7 @@ import Base from '../../layouts/Base.astro';
 import Authors from '../../components/Authors.astro';
 import PubItem from '../../components/PubItem.astro';
 import Icon from '../../components/Icon.astro';
-import { publications, research, pubLinks, bibtex, fmtDate, PUB_TYPES, authorIndex, slug, load, editUrl } from '../../lib/data';
+import { publications, research, pubLinks, bibtex, fmtDate, PUB_TYPES, authorIndex, slug, load, editUrl, citations } from '../../lib/data';
 import { render } from 'astro:content';
 export async function getStaticPaths() {
   return (await publications()).map((p) => ({ params: { id: p.id }, props: { pub: p } }));
@@ -20,6 +20,7 @@ const related = all.filter((p) => p.id !== pub.id).map((p) => [p, score(p)] as c
 const news = (await load('news')).filter((n) => n.data.publication === pub.id);
 const projects = (await load('projects')).filter((p) => p.data.publication === pub.id);
 const bib = bibtex(pub);
+const cited = citations(pub.id);
 const edit = editUrl('publications', pub.id);
 const ld = {
   '@context': 'https://schema.org', '@type': 'ScholarlyArticle', headline: d.title, name: d.title,
@@ -61,6 +62,7 @@ const ld = {
     <aside>
       {areas.length > 0 && <section><h2>Research areas</h2><ul>{areas.map((a) => <li><a href={`/research/${a.id}/`}>{a.data.title}</a></li>)}</ul></section>}
       {d.tags.length > 0 && <section><h2>Topics</h2><ul class="chips">{d.tags.map((t) => <li><a class="chip" href={`/tags/${slug(t)}/`}>{t}</a></li>)}</ul></section>}
+      {cited && cited.count > 0 && <section><h2>Citations</h2><p><a href={cited.openalex} rel="noopener">Cited by {cited.count}</a> <span class="meta">(OpenAlex, updated nightly)</span></p></section>}
       {members.length > 0 && <section><h2>Lab authors</h2><ul>{members.map((m) => <li><a href={`/people/${m.id}/`}>{m.data.name}</a></li>)}</ul></section>}
       {projects.length > 0 && <section><h2>Released with this paper</h2><ul>{projects.map((p) => <li><a href={`/software/${p.id}/`}>{p.data.title}</a></li>)}</ul></section>}
       {news.length > 0 && <section><h2>In the news</h2><ul>{news.map((n) => <li><a href={`/news/${n.id}/`}>{n.data.title}</a></li>)}</ul></section>}

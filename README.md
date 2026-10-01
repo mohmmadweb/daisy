@@ -63,6 +63,8 @@ The *Add a paper from DOI or arXiv* workflow (GitHub → Actions) does the same 
 
 - [Astro](https://astro.build) static site; content collections with schemas in `src/content.config.ts`. A wrong field fails the build with the file name and the field, and the live site keeps its previous version.
 - Search: [Pagefind](https://pagefind.app), built after Astro.
+- Citation counts: `scripts/fetch-citations.mjs` asks [OpenAlex](https://openalex.org) before every build (DOI → arXiv DOI → exact title) and writes `src/data/citations.json`. The nightly build keeps them current; if OpenAlex is unreachable the last counts are kept.
+- Home-page visuals: a live information-cascade network (`Diffusion.astro`), a scripted Text-to-SQL demo run on the site's own data (`SqlDemo.astro`), and a publication timeline (`PubTimeline.astro`). All respect reduced-motion settings.
 - Content manager: [Sveltia CMS](https://sveltiacms.app) at `/admin/`, configured in `public/admin/config.yml`. The bundle is copied from `node_modules` at build time (`scripts/vendor-cms.mjs`), so no third-party CDN is needed. GitHub sign-in goes through `auth-worker/`, a Cloudflare Worker on `auth.daisy-lab.ir`.
 - Fonts are self-hosted (IBM Plex Sans, Source Serif 4, IBM Plex Mono) so the site loads without Google Fonts.
 - `.github/workflows/deploy.yml` builds on every push to `main` and nightly, and publishes to GitHub Pages. The custom domain is set by `public/CNAME`.

@@ -1,0 +1,38 @@
+{
+  "ai-health-insurance": {
+    "count": 11,
+    "openalex": "https://openalex.org/W4414902960"
+  },
+  "ai-health-technology-assessment": {
+    "count": 9,
+    "openalex": "https://openalex.org/W4411044367"
+  },
+  "bdecf-uncertainty-recommendation": {
+    "count": 0,
+    "openalex": "https://openalex.org/W4416053888"
+  },
+  "dani-network-inference": {
+    "count": 5,
+    "openalex": "https://openalex.org/W4405843671"
+  },
+  "deep-survival-popularity": {
+    "count": 1,
+    "openalex": "https://openalex.org/W4403883726"
+  },
+  "diffstru-joint-inference": {
+    "count": 0,
+    "openalex": "https://openalex.org/W4360887050"
+  },
+  "eav-dfd-deepfake-domain-adaptation": {
+    "count": 0,
+    "openalex": "https://openalex.org/W7164928119"
+  },
+  "fnr-multimodal-fake-news": {
+    "count": 37,
+    "openalex": "https://openalex.org/W4361210785"
+  },
+  "news-labeling-early": {
+    "count": 2,
+    "openalex": "https://openalex.org/W3041094202"
+  }
+}

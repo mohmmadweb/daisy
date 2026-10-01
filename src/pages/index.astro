@@ -1,6 +1,9 @@
 ---
 import Base from '../layouts/Base.astro';
 import Daisy from '../components/Daisy.astro';
+import Diffusion from '../components/Diffusion.astro';
+import SqlDemo from '../components/SqlDemo.astro';
+import PubTimeline from '../components/PubTimeline.astro';
 import PubItem from '../components/PubItem.astro';
 import NewsItem from '../components/NewsItem.astro';
 import EventItem from '../components/EventItem.astro';
@@ -20,6 +23,7 @@ const count = (id: string) => pubs.filter((p) => p.data.areas.includes(id)).leng
 ---
 <Base>
   <section class="hero">
+    <Diffusion />
     <div class="wrap hero-grid">
       <div class="hero-text">
         <p class="lab-name"><strong>{site.name}</strong> {site.full_name}</p>
@@ -31,11 +35,11 @@ const count = (id: string) => pubs.filter((p) => p.data.areas.includes(id)).leng
         </div>
         <p class="where"><a href={site.department_url}>{site.department}</a><br /><a href={site.university_url}>{site.university}</a>, Tehran</p>
       </div>
-      <div class="hero-art"><Daisy /></div>
+      <div class="hero-art" data-tilt><Daisy /></div>
     </div>
   </section>
 
-  <section class="section directions">
+  <section class="section directions" data-reveal>
     <div class="wrap">
       <div class="section-head">
         <h2>Research directions</h2>
@@ -55,7 +59,19 @@ const count = (id: string) => pubs.filter((p) => p.data.areas.includes(id)).leng
     </div>
   </section>
 
-  <section class="section">
+  <section class="section demo" data-reveal>
+    <div class="wrap demo-grid">
+      <div class="demo-text">
+        <h2>Ask the lab's data a question</h2>
+        <p>Most of the world's data sits behind a query language that few people write. Our Text-to-SQL work turns plain questions into correct queries over real schemas, and teaches the system to say when it is not sure.</p>
+        <p>Watch it work on this site's own publication records.</p>
+        <a class="more" href="/research/text-to-sql/">Text-to-SQL and Data Interfaces</a>
+      </div>
+      <SqlDemo />
+    </div>
+  </section>
+
+  <section class="section" data-reveal>
     <div class="wrap split">
       <div>
         <div class="section-head"><h2>Latest news</h2><a class="more" href="/news/">All news</a></div>
@@ -70,18 +86,20 @@ const count = (id: string) => pubs.filter((p) => p.data.areas.includes(id)).leng
     </div>
   </section>
 
-  <section class="section">
+  <section class="section" data-reveal>
     <div class="wrap">
       <div class="section-head">
-        <div><h2>Selected publications</h2><p>{pubs.length} papers across {areas.length} research directions.</p></div>
+        <div><h2>Our work over time</h2><p>{pubs.length} papers across {areas.length} research directions.</p></div>
         <a class="more" href="/publications/">All publications</a>
       </div>
+      <div class="timeline"><PubTimeline /></div>
+      <h3 class="sub">Selected</h3>
       <div class="pubs">{featured.map((p) => <PubItem pub={p} />)}</div>
     </div>
   </section>
 
   {projects.length > 0 && (
-    <section class="section">
+    <section class="section" data-reveal>
       <div class="wrap">
         <div class="section-head"><h2>Software and data</h2><a class="more" href="/software/">Everything we release</a></div>
         <ul class="releases">
@@ -99,7 +117,7 @@ const count = (id: string) => pubs.filter((p) => p.data.areas.includes(id)).leng
     </section>
   )}
 
-  <section class="section">
+  <section class="section" data-reveal>
     <div class="wrap">
       <div class="section-head">
         <div><h2>The lab</h2><p>{current.length} members{alumni.length > 0 && `, ${alumni.length} alumni`}.</p></div>
@@ -133,8 +151,48 @@ const count = (id: string) => pubs.filter((p) => p.data.areas.includes(id)).leng
   </section>
 </Base>
 
+<script>
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Sections rise into place the first time they scroll into view.
+  const io = new IntersectionObserver((entries) => entries.forEach((e) => {
+    if (e.isIntersecting) { e.target.classList.add('shown'); io.unobserve(e.target); }
+  }), { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+  document.querySelectorAll('[data-reveal]').forEach((s) => (reduced ? s.classList.add('shown') : io.observe(s)));
+  // After a jump (anchor link, restored scroll) also show every section already passed.
+  let rq = 0;
+  addEventListener('scroll', () => { cancelAnimationFrame(rq); rq = requestAnimationFrame(() => {
+    document.querySelectorAll('[data-reveal]:not(.shown)').forEach((s) => { if (s.getBoundingClientRect().top < innerHeight) s.classList.add('shown'); });
+  }); }, { passive: true });
+  document.documentElement.classList.add('js');
+
+  // A soft light follows the pointer across the research-direction cards.
+  document.querySelectorAll<HTMLElement>('.areas a').forEach((a) => a.addEventListener('pointermove', (e) => {
+    const r = a.getBoundingClientRect();
+    a.style.setProperty('--mx', `${e.clientX - r.left}px`); a.style.setProperty('--my', `${e.clientY - r.top}px`);
+  }));
+
+  // The flower leans gently towards the pointer.
+  const tilt = document.querySelector<HTMLElement>('[data-tilt]');
+  const hero = document.querySelector<HTMLElement>('.hero');
+  if (tilt && hero && !reduced && matchMedia('(pointer: fine)').matches) {
+    let raf = 0;
+    hero.addEventListener('pointermove', (e) => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const r = tilt.getBoundingClientRect();
+        const dx = (e.clientX - (r.left + r.width / 2)) / r.width, dy = (e.clientY - (r.top + r.height / 2)) / r.height;
+        tilt.style.transform = `perspective(900px) rotateY(${dx * 10}deg) rotateX(${-dy * 10}deg) rotate(${dx * 6}deg)`;
+      });
+    });
+    hero.addEventListener('pointerleave', () => (tilt.style.transform = ''));
+  }
+</script>
+
 <style>
-  .hero { border-bottom: 1px solid var(--rule); overflow: hidden; }
+  .hero { position: relative; border-bottom: 1px solid var(--rule); overflow: hidden; }
+  .hero-grid { position: relative; z-index: 1; }
+  .hero-art { transition: transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1); will-change: transform; }
+  .hero-text { position: relative; }
   .hero-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: clamp(24px, 4vw, 64px); align-items: center; padding-top: clamp(40px, 6vw, 72px); padding-bottom: clamp(40px, 6vw, 72px); }
   .lab-name { font-size: var(--fs-sm); color: var(--ink-2); margin-bottom: 20px; }
   .lab-name strong { color: var(--ink); margin-right: 4px; }
@@ -161,6 +219,24 @@ const count = (id: string) => pubs.filter((p) => p.data.areas.includes(id)).leng
     .areas li { border-right: 0 !important; }
     .areas a { padding: 18px 0 !important; }
   }
+
+  :global(html.js) [data-reveal] { opacity: 0; transform: translateY(28px); transition: opacity 0.8s ease, transform 0.9s cubic-bezier(0.2, 0.7, 0.2, 1); }
+  :global(html.js) [data-reveal].shown { opacity: 1; transform: none; }
+
+  .areas a { position: relative; isolation: isolate; }
+  .areas a::before { content: ''; position: absolute; inset: 0; z-index: -1; opacity: 0; transition: opacity 0.3s;
+    background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 50%), color-mix(in srgb, var(--daisy) 22%, transparent), transparent 70%); }
+  .areas a:hover::before { opacity: 1; }
+
+  .demo { background: var(--surface); }
+  .demo-grid { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: clamp(28px, 5vw, 64px); align-items: center; }
+  .demo-text h2 { font-family: var(--serif); font-size: var(--fs-2xl); line-height: 1.1; letter-spacing: -0.02em; max-width: 14ch; }
+  .demo-text p { margin-top: 16px; color: var(--ink-2); max-width: 44ch; }
+  .demo-text .more { display: inline-block; margin-top: 20px; }
+  @media (max-width: 900px) { .demo-grid { grid-template-columns: minmax(0, 1fr); } }
+
+  .timeline { margin-bottom: 36px; }
+  .sub { font-size: var(--fs-md); margin-bottom: 18px; padding-top: 28px; border-top: 1px solid var(--rule); }
 
   .split { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: clamp(32px, 5vw, 64px); }
   .split > div:only-child { grid-column: 1 / -1; }

@@ -29,6 +29,7 @@ const usedAreas = areas.filter((a) => pubs.some((p) => p.data.areas.includes(a.i
       <label><span>Type</span><select name="type"><option value="">All types</option>{types.map((t) => <option value={t}>{PUB_TYPES[t]}</option>)}</select></label>
       {usedAreas.length > 0 && <label><span>Research area</span><select name="area"><option value="">All areas</option>{usedAreas.map((a) => <option value={a.id}>{a.data.title}</option>)}</select></label>}
       <label><span>Topic</span><select name="tag"><option value="">All topics</option>{tags.map(([t, n]) => <option value={t}>{t} ({n})</option>)}</select></label>
+      <label><span>Sort</span><select name="sort"><option value="">Newest first</option><option value="cites">Most cited</option></select></label>
       {labAuthors.length > 1 && <label><span>Lab author</span><select name="author"><option value="">Anyone</option>{labAuthors.map((m) => <option value={[m.data.name, ...m.data.aliases].join('|')}>{m.data.name}</option>)}</select></label>}
     </form>
     <div class="status-row">
@@ -45,6 +46,7 @@ const usedAreas = areas.filter((a) => pubs.some((p) => p.data.areas.includes(a.i
         <div>{pubs.filter((p) => p.data.year === y).map((p) => <PubItem pub={p} showYear={false} />)}</div>
       </section>
     ))}
+    <div class="flat" data-flat hidden></div>
     <p class="empty" data-none hidden>No publications match these filters. <button type="button" class="linkish" data-reset>Clear filters</button></p>
   </div>
 </Base>
@@ -56,7 +58,9 @@ const usedAreas = areas.filter((a) => pubs.some((p) => p.data.areas.includes(a.i
   const shown = document.querySelector('[data-shown]')!;
   const none = document.querySelector<HTMLElement>('[data-none]')!;
   const resets = document.querySelectorAll<HTMLElement>('[data-reset]');
-  const fields = ['q', 'year', 'type', 'area', 'tag', 'author'];
+  const fields = ['q', 'year', 'type', 'area', 'tag', 'author', 'sort'];
+  const flat = document.querySelector<HTMLElement>('[data-flat]')!;
+  const homes = new Map(items.map((el) => [el, el.parentElement!]));
   const get = (n: string) => (form.elements.namedItem(n) as HTMLInputElement | null)?.value ?? '';
 
   const params = new URLSearchParams(location.search);
@@ -74,10 +78,18 @@ const usedAreas = areas.filter((a) => pubs.some((p) => p.data.areas.includes(a.i
         && (!names.length || d.authors!.split('|').some((a) => names.includes(a)));
       el.hidden = !ok; if (ok) n++;
     }
-    groups.forEach((g) => (g.hidden = !g.querySelector('[data-pub]:not([hidden])')));
+    // "Most cited" shows one flat list; otherwise papers sit under their year.
+    if (get('sort') === 'cites') {
+      [...items].sort((a, b) => Number(b.dataset.cites) - Number(a.dataset.cites) || Number(b.dataset.time) - Number(a.dataset.time)).forEach((el) => flat.append(el));
+      flat.hidden = false; groups.forEach((g) => (g.hidden = true));
+    } else {
+      items.forEach((el) => homes.get(el)!.append(el));
+      flat.hidden = true;
+      groups.forEach((g) => (g.hidden = !g.querySelector('[data-pub]:not([hidden])')));
+    }
     shown.textContent = String(n);
     none.hidden = n > 0;
-    const active = fields.some((f) => get(f));
+    const active = fields.filter((f) => f !== 'sort').some((f) => get(f));
     resets.forEach((r) => (r.hidden = !active && r.closest('[data-none]') === null));
     const url = new URL(location.href);
     fields.forEach((f) => (get(f) ? url.searchParams.set(f, get(f)) : url.searchParams.delete(f)));
@@ -102,6 +114,7 @@ const usedAreas = areas.filter((a) => pubs.some((p) => p.data.areas.includes(a.i
   .actions { display: flex; gap: 18px; }
   .linkish { font: inherit; font-size: var(--fs-sm); font-weight: 550; color: var(--link); background: none; border: 0; padding: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
   .linkish:hover { text-decoration: underline; }
+  .flat { margin-top: 16px; border-top: 1px solid var(--rule); padding-top: 20px; }
   .year { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 24px; padding-top: 28px; border-top: 1px solid var(--rule); margin-top: 12px; }
   .y { font-family: var(--serif); font-size: 2rem; font-weight: 500; color: var(--muted); position: sticky; top: 88px; align-self: start; line-height: 1; }
   .year :global(.pub:last-child) { border-bottom: 0; }

@@ -1,15 +1,16 @@
 ---
 import Authors from './Authors.astro';
 import Icon from './Icon.astro';
-import { pubLinks, bibtex, PUB_TYPES, type Pub } from '../lib/data';
+import { pubLinks, bibtex, citations, PUB_TYPES, type Pub } from '../lib/data';
 interface Props { pub: Pub; showYear?: boolean; compact?: boolean }
 const { pub, showYear = true, compact = false } = Astro.props;
 const d = pub.data;
 const links = pubLinks(pub);
 const bib = bibtex(pub);
+const cited = citations(pub.id);
 ---
 <article class="pub" data-pub
-  data-year={d.year} data-type={d.type} data-areas={d.areas.join('|')} data-tags={d.tags.join('|')}
+  data-year={d.year} data-cites={cited?.count ?? 0} data-time={(d.date ?? new Date(Date.UTC(d.year, 0, 1))).getTime()} data-type={d.type} data-areas={d.areas.join('|')} data-tags={d.tags.join('|')}
   data-authors={d.authors.join('|')} data-text={`${d.title} ${d.authors.join(' ')} ${d.venue} ${d.venue_short ?? ''} ${d.tags.join(' ')}`.toLowerCase()}>
   <h3 class="pub-title"><a href={`/publications/${pub.id}/`}>{d.title}</a>{d.sample && <span class="sample-note">Sample</span>}</h3>
   <p class="pub-authors"><Authors authors={d.authors} /></p>
@@ -17,6 +18,7 @@ const bib = bibtex(pub);
     <em>{d.venue_short && !d.venue.includes(d.venue_short) && !compact ? `${d.venue} (${d.venue_short})` : d.venue}</em>{showYear && <span>, {d.year}</span>}
     {d.type === 'preprint' && <span class="kind">{PUB_TYPES[d.type]}</span>}
     {d.award && <span class="badge"><Icon name="award" size={13} />{d.award}</span>}
+    {cited && cited.count > 0 && <a class="cites" href={cited.openalex} rel="noopener" title="Citation count from OpenAlex">Cited by {cited.count}</a>}
   </p>
   {!compact && (
     <div class="pub-links">
@@ -55,6 +57,8 @@ const bib = bibtex(pub);
   .pub-venue { margin-top: 3px; font-size: var(--fs-sm); color: var(--ink-2); display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
   .pub-venue > em + span { margin-left: -10px; }
   .kind { color: var(--muted); }
+  .cites { font-size: var(--fs-xs); font-weight: 600; color: var(--ink-2); text-decoration: none; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--rule-strong); font-variant-numeric: tabular-nums; }
+  .cites:hover { border-color: var(--ink); color: var(--ink); }
   .pub-links { margin-top: 10px; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 6px; }
   .pub-links > a, .bib summary { font-size: var(--fs-xs); font-weight: 550; padding: 3px 10px; border: 1px solid var(--rule-strong); border-radius: var(--r-sm); color: var(--ink-2); text-decoration: none; cursor: pointer; background: var(--surface); line-height: 1.6; }
   .pub-links > a:hover, .bib summary:hover { border-color: var(--ink); color: var(--ink); }

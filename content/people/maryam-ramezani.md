@@ -3,7 +3,7 @@ name: Maryam Ramezani
 name_fa: مریم رمضانی
 role: faculty
 title: Assistant Professor of Computer Engineering
-photo: /images/people/maryam-ramezani.png
+photo: /images/people/maryam-ramezani.jpg
 email: maryam.ramezani@sharif.edu
 phone: "+98 21 6616 6654"
 office: Room 821, Department of Computer Engineering

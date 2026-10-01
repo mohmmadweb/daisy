@@ -1,0 +1,172 @@
+---
+// Live background for the home-page hero: a small social network on which
+// information cascades spread (an independent-cascade model, the setting of
+// the lab's network-inference work). Cascades start on their own every few
+// seconds; clicking or tapping starts one from the nearest node.
+---
+<div class="diffusion" data-diffusion aria-hidden="true">
+  <canvas></canvas>
+</div>
+<p class="diffusion-note" data-diffusion-note>
+  <span class="pulse" aria-hidden="true"></span>
+  Live: information spreading through a network. <span class="hint">Click anywhere to start a cascade.</span>
+</p>
+
+<script>
+  type Node = { x: number; y: number; vx: number; vy: number; hx: number; hy: number; r: number; heat: number; wave: number };
+  type Edge = { a: number; b: number; heat: number };
+  type Pending = { node: number; at: number; wave: number; from: number };
+
+  const root = document.querySelector<HTMLElement>('[data-diffusion]');
+  const canvas = root?.querySelector('canvas');
+  const ctx = canvas?.getContext('2d');
+  if (root && canvas && ctx) {
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let W = 0, H = 0, dpr = 1;
+    let nodes: Node[] = [];
+    let edges: Edge[] = [];
+    let adj: number[][] = [];
+    let pending: Pending[] = [];
+    let visible = true, nextAuto = 0, waveId = 0, last = performance.now();
+    const mouse = { x: -1e4, y: -1e4 };
+
+    const css = () => {
+      const s = getComputedStyle(document.documentElement);
+      return { ink: s.getPropertyValue('--ink').trim() || '#1b1e22', daisy: s.getPropertyValue('--daisy').trim() || '#f2c434' };
+    };
+    let colors = css();
+    const hex = (h: string) => { const n = parseInt(h.replace('#', ''), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+    let ink = hex(colors.ink), gold = hex(colors.daisy);
+    const rgba = (c: number[], a: number) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+
+    // Seeded random so the network looks the same on every visit.
+    let seed = 7;
+    const rand = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+
+    function build() {
+      const rect = root!.getBoundingClientRect();
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      W = rect.width; H = rect.height;
+      canvas!.width = Math.round(W * dpr); canvas!.height = Math.round(H * dpr);
+      canvas!.style.width = `${W}px`; canvas!.style.height = `${H}px`;
+      ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
+      seed = 7;
+      const count = Math.round(Math.min(130, Math.max(46, (W * H) / 9000)));
+      // Communities: a few clusters, so cascades visibly jump between groups.
+      const k = 5;
+      const centers = Array.from({ length: k }, () => ({ x: 0.08 + rand() * 0.84, y: 0.1 + rand() * 0.8 }));
+      nodes = Array.from({ length: count }, (_, i) => {
+        const c = centers[i % k];
+        const x = (c.x + (rand() - 0.5) * 0.32) * W, y = (c.y + (rand() - 0.5) * 0.38) * H;
+        return { x, y, hx: x, hy: y, vx: 0, vy: 0, r: 1.6 + rand() * 2.2, heat: 0, wave: -1 };
+      });
+      edges = []; adj = nodes.map(() => []);
+      const maxD = Math.min(150, Math.max(90, W / 9));
+      nodes.forEach((n, i) => {
+        const near = nodes.map((m, j) => ({ j, d: Math.hypot(m.x - n.x, m.y - n.y) }))
+          .filter((o) => o.j !== i && o.d < maxD).sort((a, b) => a.d - b.d).slice(0, 3);
+        for (const { j } of near) {
+          if (adj[i].includes(j)) continue;
+          adj[i].push(j); adj[j].push(i); edges.push({ a: i, b: j, heat: 0 });
+        }
+      });
+    }
+
+    function edgeOf(a: number, b: number) { return edges.find((e) => (e.a === a && e.b === b) || (e.a === b && e.b === a)); }
+
+    function seedCascade(i: number, now: number) {
+      const id = ++waveId;
+      nodes[i].wave = id; nodes[i].heat = 1;
+      for (const j of adj[i]) pending.push({ node: j, from: i, wave: id, at: now + 260 + rand() * 380 });
+    }
+
+    function step(now: number) {
+      const dt = Math.min(48, now - last); last = now;
+      // Activations: each neighbour is infected once per cascade with probability p.
+      const due = pending.filter((p) => p.at <= now);
+      pending = pending.filter((p) => p.at > now);
+      for (const p of due) {
+        const n = nodes[p.node];
+        if (n.wave === p.wave) continue;
+        const e = edgeOf(p.from, p.node); if (e) e.heat = 1;
+        if (rand() < 0.52) {
+          n.wave = p.wave; n.heat = 1;
+          for (const j of adj[p.node]) if (nodes[j].wave !== p.wave) pending.push({ node: j, from: p.node, wave: p.wave, at: now + 240 + rand() * 520 });
+        }
+      }
+      if (!reduced && now > nextAuto && pending.length === 0) { seedCascade(Math.floor(rand() * nodes.length), now); nextAuto = now + 2600 + rand() * 2200; }
+
+      for (const n of nodes) {
+        // Drift around a home position; the cursor gently pulls nearby nodes.
+        const dx = mouse.x - n.x, dy = mouse.y - n.y, d = Math.hypot(dx, dy);
+        if (d < 140 && d > 1) { n.vx += (dx / d) * 0.018; n.vy += (dy / d) * 0.018; }
+        n.vx += (n.hx - n.x) * 0.0016 + (rand() - 0.5) * 0.02;
+        n.vy += (n.hy - n.y) * 0.0016 + (rand() - 0.5) * 0.02;
+        n.vx *= 0.94; n.vy *= 0.94;
+        if (!reduced) { n.x += n.vx * dt * 0.06; n.y += n.vy * dt * 0.06; }
+        n.heat = Math.max(0, n.heat - dt / 2600);
+      }
+      for (const e of edges) e.heat = Math.max(0, e.heat - dt / 1300);
+    }
+
+    function draw() {
+      ctx!.clearRect(0, 0, W, H);
+      ctx!.lineWidth = 1;
+      for (const e of edges) {
+        const a = nodes[e.a], b = nodes[e.b];
+        ctx!.strokeStyle = e.heat > 0.02 ? rgba(gold, 0.25 + e.heat * 0.75) : rgba(ink, 0.09);
+        ctx!.lineWidth = e.heat > 0.02 ? 1 + e.heat * 1.6 : 1;
+        ctx!.beginPath(); ctx!.moveTo(a.x, a.y); ctx!.lineTo(b.x, b.y); ctx!.stroke();
+      }
+      for (const n of nodes) {
+        if (n.heat > 0.02) {
+          ctx!.fillStyle = rgba(gold, n.heat * 0.28);
+          ctx!.beginPath(); ctx!.arc(n.x, n.y, n.r + 10 * n.heat, 0, Math.PI * 2); ctx!.fill();
+        }
+        ctx!.fillStyle = n.heat > 0.02 ? rgba(gold, 0.55 + n.heat * 0.45) : rgba(ink, 0.32);
+        ctx!.beginPath(); ctx!.arc(n.x, n.y, n.r + n.heat * 1.5, 0, Math.PI * 2); ctx!.fill();
+      }
+    }
+
+    function frame(now: number) {
+      if (visible && !document.hidden) { step(now); draw(); }
+      requestAnimationFrame(frame);
+    }
+
+    build(); draw();
+    if (!reduced) seedCascade(Math.floor(nodes.length / 2), performance.now() + 400);
+    requestAnimationFrame(frame);
+
+    const hero = root.parentElement!;
+    hero.addEventListener('pointermove', (e) => { const r = root.getBoundingClientRect(); mouse.x = e.clientX - r.left; mouse.y = e.clientY - r.top; });
+    hero.addEventListener('pointerleave', () => { mouse.x = mouse.y = -1e4; });
+    hero.addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).closest('a, button, svg')) return;
+      const r = root.getBoundingClientRect(); const x = e.clientX - r.left, y = e.clientY - r.top;
+      let best = 0, bd = Infinity;
+      nodes.forEach((n, i) => { const d = Math.hypot(n.x - x, n.y - y); if (d < bd) { bd = d; best = i; } });
+      seedCascade(best, performance.now());
+    });
+    new IntersectionObserver(([en]) => (visible = en.isIntersecting)).observe(root);
+    let t = 0;
+    addEventListener('resize', () => { clearTimeout(t); t = window.setTimeout(() => { build(); draw(); }, 200); });
+    new MutationObserver(() => { colors = css(); ink = hex(colors.ink); gold = hex(colors.daisy); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { colors = css(); ink = hex(colors.ink); gold = hex(colors.daisy); });
+  }
+</script>
+
+<style>
+  .diffusion { position: absolute; inset: 0; z-index: 0; pointer-events: none;
+    /* Fade the network out behind the headline so text stays readable. */
+    mask-image: linear-gradient(90deg, rgb(0 0 0 / 0.22) 0%, rgb(0 0 0 / 0.35) 38%, #000 70%);
+    -webkit-mask-image: linear-gradient(90deg, rgb(0 0 0 / 0.22) 0%, rgb(0 0 0 / 0.35) 38%, #000 70%); }
+  canvas { display: block; }
+  .diffusion-note { position: absolute; z-index: 1; left: var(--gutter); bottom: 14px; margin: 0; display: flex; align-items: center; gap: 8px; font-size: var(--fs-xs); color: var(--muted); }
+  .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--daisy); box-shadow: 0 0 0 0 color-mix(in srgb, var(--daisy) 70%, transparent); animation: pulse 2s infinite; }
+  @keyframes pulse { 70% { box-shadow: 0 0 0 9px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+  @media (max-width: 900px) {
+    .diffusion { mask-image: linear-gradient(180deg, rgb(0 0 0 / 0.25), #000 60%); -webkit-mask-image: linear-gradient(180deg, rgb(0 0 0 / 0.25), #000 60%); }
+    .hint { display: none; }
+  }
+  @media (min-width: 1240px) { .diffusion-note { left: calc((100vw - var(--wrap)) / 2 + var(--gutter)); } }
+</style>

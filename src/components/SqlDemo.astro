@@ -1,0 +1,159 @@
+---
+// A scripted illustration of the lab's Text-to-SQL work: a question is turned
+// into SQL, which is "run" against this site's real publication data (the
+// results are computed at build time). The last question is ambiguous, and the
+// system declines instead of guessing.
+import { publications, people } from '../lib/data';
+
+const pubs = await publications();
+const { all } = await people();
+const director = all.find((p) => p.data.role === 'faculty')?.data.name ?? '';
+const short = (t: string, n = 58) => (t.length > n ? t.slice(0, n - 1).trimEnd() + '…' : t);
+const nowYear = Math.max(...pubs.map((p) => p.data.year));
+
+const perYear = [...new Set(pubs.map((p) => p.data.year))].filter((y) => y >= nowYear - 3).sort((a, b) => b - a)
+  .map((y) => [String(y), String(pubs.filter((p) => p.data.year === y).length)]);
+const diffusion = pubs.filter((p) => p.data.type === 'journal' && p.data.tags.includes('Information Diffusion'))
+  .map((p) => [short(p.data.title), p.data.venue_short ?? p.data.venue, String(p.data.year)]);
+const coauthors = new Map<string, number>();
+pubs.forEach((p) => p.data.authors.filter((a) => a !== director).forEach((a) => coauthors.set(a, (coauthors.get(a) ?? 0) + 1)));
+const top = [...coauthors].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 3).map(([a, n]) => [a, String(n)]);
+
+const demos = [
+  {
+    q: `How many papers did the lab publish each year since ${nowYear - 3}?`,
+    schema: ['publications.year'],
+    sql: `SELECT year, COUNT(*) AS papers\nFROM publications\nWHERE year >= ${nowYear - 3}\nGROUP BY year\nORDER BY year DESC;`,
+    cols: ['year', 'papers'], rows: perYear, confidence: 0.97,
+  },
+  {
+    q: 'Which journal papers are about information diffusion?',
+    schema: ['publications.type', 'publications.tags'],
+    sql: `SELECT title, venue, year\nFROM publications\nWHERE type = 'journal'\n  AND 'Information Diffusion' = ANY(tags)\nORDER BY year DESC;`,
+    cols: ['title', 'venue', 'year'], rows: diffusion, confidence: 0.93,
+  },
+  {
+    q: 'Who has co-authored the most papers with the lab?',
+    schema: ['paper_authors.author', 'paper_authors.paper_id'],
+    sql: `SELECT author, COUNT(*) AS papers\nFROM paper_authors\nWHERE author <> '${director}'\nGROUP BY author\nORDER BY papers DESC\nLIMIT 3;`,
+    cols: ['author', 'papers'], rows: top, confidence: 0.9,
+  },
+  {
+    q: 'What is our best paper?',
+    schema: [],
+    sql: '',
+    cols: [], rows: [], confidence: 0.31,
+    abstain: '“Best” is ambiguous: most cited, award-winning, or most recent? The system asks instead of guessing.',
+  },
+];
+---
+<div class="sql" data-sql-demo data-demos={JSON.stringify(demos)}>
+  <div class="tabs" role="tablist" aria-label="Example questions">
+    {demos.map((d, i) => <button type="button" role="tab" aria-selected={i === 0 ? 'true' : 'false'} data-i={i}>{d.q}</button>)}
+  </div>
+  <div class="console">
+    <div class="bar" aria-hidden="true"><span></span><span></span><span></span><em>daisy-lab.ir / publications</em></div>
+    <div class="body" aria-live="polite">
+      <p class="ask"><span class="who">Question</span><span data-q></span><span class="caret" data-caret></span></p>
+      <p class="link" data-link hidden><span class="who">Schema linking</span><span data-schema></span></p>
+      <pre class="code" data-code hidden><code data-sqlcode></code></pre>
+      <p class="abstain" data-abstain hidden></p>
+      <div class="result" data-result hidden>
+        <table><thead data-head></thead><tbody data-rows></tbody></table>
+      </div>
+      <div class="conf" data-conf hidden>
+        <span class="who">Confidence</span>
+        <span class="meter"><span data-meter></span></span>
+        <span data-confv></span>
+      </div>
+    </div>
+  </div>
+  <p class="note">A scripted illustration run on this site's real publication data. <a href="/research/text-to-sql/">About our Text-to-SQL research</a></p>
+</div>
+
+<script>
+  type Demo = { q: string; schema: string[]; sql: string; cols: string[]; rows: string[][]; confidence: number; abstain?: string };
+  const el = document.querySelector<HTMLElement>('[data-sql-demo]');
+  if (el) {
+    const demos: Demo[] = JSON.parse(el.dataset.demos!);
+    const $ = <T extends HTMLElement>(s: string) => el.querySelector<T>(s)!;
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const KW = /\b(SELECT|FROM|WHERE|AND|OR|GROUP BY|ORDER BY|LIMIT|COUNT|AS|DESC|ASC|ANY)\b/g;
+    const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]!);
+    const hl = (s: string) => esc(s).replace(/'[^']*'/g, (m) => `<span class="s">${m}</span>`).replace(KW, '<span class="k">$1</span>').replace(/\b(\d+)\b/g, '<span class="n">$1</span>');
+    let run = 0, auto = 0, started = false;
+    const wait = (ms: number) => new Promise((r) => setTimeout(r, reduced ? 0 : ms));
+
+    async function play(i: number) {
+      const id = ++run; clearTimeout(auto);
+      const d = demos[i];
+      el!.querySelectorAll('[role=tab]').forEach((t, j) => t.setAttribute('aria-selected', String(j === i)));
+      ['[data-link]', '[data-code]', '[data-abstain]', '[data-result]', '[data-conf]'].forEach((s) => ($(s).hidden = true));
+      const q = $('[data-q]'); q.textContent = '';
+      $('[data-caret]').hidden = false;
+      for (const ch of d.q) { if (id !== run) return; q.textContent += ch; await wait(22); }
+      $('[data-caret]').hidden = true;
+      await wait(350); if (id !== run) return;
+      if (d.schema.length) { $('[data-schema]').textContent = d.schema.join(', '); $('[data-link]').hidden = false; await wait(500); }
+      if (d.sql) {
+        const code = $('[data-sqlcode]'); $('[data-code]').hidden = false; code.innerHTML = '';
+        const tokens = d.sql.split(/(\s+)/);
+        let acc = '';
+        for (const t of tokens) { if (id !== run) return; acc += t; code.innerHTML = hl(acc); if (t.trim()) await wait(55); }
+        await wait(300); if (id !== run) return;
+        $('[data-head]').innerHTML = `<tr>${d.cols.map((c) => `<th>${esc(c)}</th>`).join('')}</tr>`;
+        $('[data-rows]').innerHTML = d.rows.map((r) => `<tr>${r.map((c) => `<td>${esc(c)}</td>`).join('')}</tr>`).join('');
+        $('[data-result]').hidden = false;
+      } else if (d.abstain) {
+        $('[data-abstain]').textContent = d.abstain; $('[data-abstain]').hidden = false;
+      }
+      const conf = $('[data-conf]'); conf.hidden = false; conf.classList.toggle('low', d.confidence < 0.5);
+      const meter = $('[data-meter]'); meter.style.width = '0%';
+      requestAnimationFrame(() => (meter.style.width = `${Math.round(d.confidence * 100)}%`));
+      $('[data-confv]').textContent = d.confidence.toFixed(2) + (d.confidence < 0.5 ? ', below threshold' : '');
+      if (!reduced) auto = window.setTimeout(() => play((i + 1) % demos.length), d.sql ? 5200 : 4200);
+    }
+    el.querySelectorAll<HTMLButtonElement>('[role=tab]').forEach((b) => b.addEventListener('click', () => play(Number(b.dataset.i))));
+    new IntersectionObserver(([en]) => {
+      if (en.isIntersecting && !started) { started = true; play(0); }
+      if (!en.isIntersecting) { clearTimeout(auto); run++; started = false; }
+    }, { threshold: 0.35 }).observe(el);
+  }
+</script>
+
+<style>
+  .sql { min-width: 0; }
+  .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .tabs button { font: inherit; font-size: var(--fs-xs); text-align: left; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--rule-strong); background: var(--surface); color: var(--ink-2); cursor: pointer; max-width: 100%; }
+  .tabs button:hover { border-color: var(--ink); color: var(--ink); }
+  .tabs button[aria-selected='true'] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .console { border-radius: 14px; overflow: hidden; background: #15181c; color: #e6e8e4; border: 1px solid #2b3035; box-shadow: 0 30px 60px -30px rgb(0 0 0 / 0.45); }
+  .bar { display: flex; align-items: center; gap: 7px; padding: 11px 14px; border-bottom: 1px solid #2b3035; background: #1b1f24; }
+  .bar span { width: 10px; height: 10px; border-radius: 50%; background: #3a4048; }
+  .bar span:first-child { background: #f2c434; }
+  .bar em { margin-left: 8px; font-style: normal; font-family: var(--mono); font-size: 0.75rem; color: #8e969f; }
+  .body { padding: 18px 20px 20px; min-height: 340px; font-size: 0.92rem; }
+  .body p { margin: 0; }
+  .who { display: inline-block; min-width: 118px; font-size: 0.75rem; color: #8e969f; font-weight: 550; }
+  .ask { font-size: 1.02rem; color: #fff; }
+  .caret { display: inline-block; width: 8px; height: 1.05em; background: #f2c434; vertical-align: text-bottom; margin-left: 2px; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .link { margin-top: 10px !important; font-family: var(--mono); font-size: 0.8rem; color: #b8c7d9; }
+  .code { margin: 14px 0 0; padding: 14px 16px; border-radius: 8px; background: #0f1215; font-family: var(--mono); font-size: 0.82rem; line-height: 1.6; white-space: pre-wrap; color: #d7dbe0; overflow-x: auto; }
+  .code :global(.k) { color: #f2c434; font-weight: 600; }
+  .code :global(.s) { color: #8fd3a8; }
+  .code :global(.n) { color: #93bdeb; }
+  .abstain { margin-top: 16px !important; padding: 12px 14px; border-left: 3px solid #f2c434; background: #1d2126; color: #f0e6c4; }
+  .result { margin-top: 14px; overflow-x: auto; animation: rise 0.4s ease both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  th { text-align: left; color: #8e969f; font-weight: 600; padding: 6px 12px 6px 0; border-bottom: 1px solid #2b3035; font-family: var(--mono); font-size: 0.75rem; }
+  td { padding: 7px 12px 7px 0; border-bottom: 1px solid #22272c; color: #e6e8e4; font-variant-numeric: tabular-nums; }
+  .conf { display: flex; align-items: center; gap: 10px; margin-top: 16px; font-size: 0.8rem; color: #c9ced4; }
+  .conf .who { min-width: 0; }
+  .meter { flex: 0 1 180px; height: 6px; border-radius: 3px; background: #2b3035; overflow: hidden; }
+  .meter span { display: block; height: 100%; width: 0; background: #6fcf9c; border-radius: 3px; transition: width 0.9s cubic-bezier(0.2, 0.7, 0.2, 1); }
+  .conf.low .meter span { background: #f2c434; }
+  .note { margin-top: 12px; font-size: var(--fs-xs); color: var(--muted); }
+  @media (max-width: 600px) { .who { display: block; margin-bottom: 2px; } .body { min-height: 380px; } }
+</style>
